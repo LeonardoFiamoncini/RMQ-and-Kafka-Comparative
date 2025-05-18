@@ -9,6 +9,7 @@ __pycache__/
 # Logs
 *.log
 *_queue.txt
+rabbitmq/*-queue.txt
 
 # Configuração de IDEs
 .vscode/
