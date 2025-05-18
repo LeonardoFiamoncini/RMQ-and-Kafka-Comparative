@@ -1,0 +1,16 @@
+# Ignorar ambiente virtual
+rabbitmq/venv/
+
+# Ignorar arquivos de cache do Python
+__pycache__/
+*.pyc
+*.pyo
+
+# Logs
+*.log
+*_queue.txt
+
+# Configuração de IDEs
+.vscode/
+.idea/
+
