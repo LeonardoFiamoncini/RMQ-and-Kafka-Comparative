@@ -81,7 +81,7 @@ sudo apt install python3-full
 
 # Ativar ambiente virtual e instalar dependências
 echo "🐍 Ativando ambiente virtual e instalando bibliotecas Python..."
-source venv/bin/activate
+. venv/bin/activate
 pip install --upgrade pip
 pip install pika
 
