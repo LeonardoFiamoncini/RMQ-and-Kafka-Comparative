@@ -4,7 +4,7 @@ def callback(ch, method, properties, body):
     print(f"[x] Mensagem recebida: {len(body)} bytes")
 
 def start_consumer():
-    credentials = pika.PlainCredentials('guest', 'guest')
+    credentials = pika.PlainCredentials('user', 'password')
     parameters = pika.ConnectionParameters('localhost', 5672, '/', credentials)
 
     connection = pika.BlockingConnection(parameters)

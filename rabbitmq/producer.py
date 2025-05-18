@@ -3,7 +3,7 @@ import sys
 import time
 
 def send_messages(count=1000, message_size=100):
-    credentials = pika.PlainCredentials('guest', 'guest')  # <-- credenciais corretas
+    credentials = pika.PlainCredentials('user', 'password')  # <-- credenciais corretas
     parameters = pika.ConnectionParameters('localhost', 5672, '/', credentials)
 
     connection = pika.BlockingConnection(parameters)
