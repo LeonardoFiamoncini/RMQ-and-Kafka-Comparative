@@ -1,3 +1,3 @@
 #!/bin/bash
 
-rmdir -rf logs/
+rm -rf logs/
