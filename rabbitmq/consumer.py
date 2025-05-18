@@ -1,10 +1,14 @@
 import pika
 import logging
 from datetime import datetime
+import os
 
 def setup_logger():
-    data_str = datetime.now().strftime("%Y-%m-%d")
-    log_file = f"{data_str}_consumer-queue.txt"
+    date_str = datetime.now().strftime("%Y-%m-%d")
+    log_dir = os.path.join("..", "logs", "rabbitmq")
+    os.makedirs(log_dir, exist_ok=True)
+    log_file = os.path.join(log_dir, f"{date_str}_consumer-queue.txt")
+
     logging.basicConfig(
         filename=log_file,
         filemode="a",
@@ -21,10 +25,9 @@ def start_consumer():
 
     connection = pika.BlockingConnection(parameters)
     channel = connection.channel()
-
     channel.queue_declare(queue='bcc-tcc')
-    channel.basic_consume(queue='bcc-tcc', on_message_callback=callback, auto_ack=True)
 
+    channel.basic_consume(queue='bcc-tcc', on_message_callback=callback, auto_ack=True)
     print('[*] Aguardando mensagens. Pressione CTRL+C para sair')
     channel.start_consuming()
 

@@ -3,10 +3,14 @@ import sys
 import time
 import logging
 from datetime import datetime
+import os
 
 def setup_logger():
-    data_str = datetime.now().strftime("%Y-%m-%d")
-    log_file = f"{data_str}_producer-queue.txt"
+    date_str = datetime.now().strftime("%Y-%m-%d")
+    log_dir = os.path.join("..", "logs", "rabbitmq")
+    os.makedirs(log_dir, exist_ok=True)
+    log_file = os.path.join(log_dir, f"{date_str}_producer-queue.txt")
+
     logging.basicConfig(
         filename=log_file,
         filemode="a",
@@ -20,13 +24,12 @@ def send_messages(count=1000, message_size=100):
 
     connection = pika.BlockingConnection(parameters)
     channel = connection.channel()
-
     channel.queue_declare(queue='bcc-tcc')
-    message = 'x' * message_size
 
+    message = 'x' * message_size
     for i in range(count):
         channel.basic_publish(exchange='', routing_key='bcc-tcc', body=message)
-        logging.info(f"Mensagem {i+1} enviada com {message_size} bytes")
+        logging.info(f"Mensagem {i + 1} enviada com {message_size} bytes")
         time.sleep(0.001)
 
     connection.close()

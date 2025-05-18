@@ -2,11 +2,24 @@
 <html lang="pt-br">
 <head>
     <meta charset="UTF-8">
-    <title>Mensageria - RabbitMQ & Kafka</title>
+    <title>Simulador de Mensageria</title>
+    <link rel="stylesheet" href="/static/styles.css">
 </head>
 <body>
-    <h1>Simulador de Envio de Mensagens</h1>
-    <button onclick="location.href='/send-rabbitmq'">Send - RabbitMQ</button>
-    <button onclick="location.href='/send-kafka'">Send - Apache Kafka</button>
+    <div class="container">
+        <!-- Apache Kafka -->
+        <div class="card">
+            <img class="logo" src="https://kafka.apache.org/logos/kafka_logo--simple.png" alt="Apache Kafka Logo">
+            <br>
+            <button class="btn-kafka" onclick="location.href='/send-kafka'">Send - Apache Kafka</button>
+        </div>
+
+        <!-- RabbitMQ -->
+        <div class="card">
+            <img class="logo" src="https://www.rabbitmq.com/img/rabbitmq-logo-with-name.svg" alt="RabbitMQ Logo">
+            <br>
+            <button class="btn-rabbit" onclick="location.href='/send-rabbitmq'">Send - RabbitMQ</button>
+        </div>
+    </div>
 </body>
 </html>
