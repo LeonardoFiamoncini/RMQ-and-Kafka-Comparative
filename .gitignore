@@ -1,17 +1,18 @@
-# Ignorar ambiente virtual
-rabbitmq/venv/
+# Ambientes virtuais
+venv/
+*/venv/
 
 # Ignorar arquivos de cache do Python
 __pycache__/
 *.pyc
 *.pyo
+*.py[cod]
 
 # Logs
 *.log
-*_queue.txt
+*-queue.txt
 rabbitmq/*-queue.txt
 
 # Configuração de IDEs
 .vscode/
 .idea/
-
