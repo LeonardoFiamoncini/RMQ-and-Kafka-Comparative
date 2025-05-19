@@ -1,4 +1,4 @@
-import pika
+from kafka import KafkaConsumer
 import logging
 from datetime import datetime
 import os
@@ -8,7 +8,7 @@ BASE_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
 
 def setup_logger():
     date_str = datetime.now().strftime("%Y-%m-%d")
-    log_dir = os.path.join(BASE_DIR, "logs", "rabbitmq")
+    log_dir = os.path.join(BASE_DIR, "logs", "kafka")
     try:
         os.makedirs(log_dir, exist_ok=True)
     except Exception as e:
@@ -23,20 +23,18 @@ def setup_logger():
         level=logging.INFO
     )
 
-def callback(ch, method, properties, body):
-    logging.info(f"Mensagem recebida com {len(body)} bytes")
-
 def start_consumer():
-    credentials = pika.PlainCredentials('user', 'password')
-    parameters = pika.ConnectionParameters('localhost', 5672, '/', credentials)
+    consumer = KafkaConsumer(
+        'bcc-tcc',
+        bootstrap_servers='localhost:9092',
+        auto_offset_reset='earliest',
+        enable_auto_commit=True,
+        group_id='tcc-consumer-group'
+    )
 
-    connection = pika.BlockingConnection(parameters)
-    channel = connection.channel()
-    channel.queue_declare(queue='bcc-tcc')
-
-    channel.basic_consume(queue='bcc-tcc', on_message_callback=callback, auto_ack=True)
     print('[*] Aguardando mensagens. Pressione CTRL+C para sair')
-    channel.start_consuming()
+    for message in consumer:
+        logging.info(f"Mensagem recebida com {len(message.value)} bytes")
 
 if __name__ == "__main__":
     setup_logger()

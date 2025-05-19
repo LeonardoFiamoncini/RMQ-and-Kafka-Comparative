@@ -1,4 +1,4 @@
-import pika
+from kafka import KafkaProducer
 import sys
 import time
 import logging
@@ -10,8 +10,12 @@ BASE_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
 
 def setup_logger():
     date_str = datetime.now().strftime("%Y-%m-%d")
-    log_dir = os.path.join(BASE_DIR, "logs", "rabbitmq")
-    os.makedirs(log_dir, exist_ok=True)
+    log_dir = os.path.join(BASE_DIR, "logs", "kafka")
+    try:
+        os.makedirs(log_dir, exist_ok=True)
+    except Exception as e:
+        print(f"Erro ao criar diretório de log: {e}")
+        sys.exit(1)
     log_file = os.path.join(log_dir, f"{date_str}_producer-queue.txt")
 
     logging.basicConfig(
@@ -22,20 +26,15 @@ def setup_logger():
     )
 
 def send_messages(count=1000, message_size=100):
-    credentials = pika.PlainCredentials('user', 'password')
-    parameters = pika.ConnectionParameters('localhost', 5672, '/', credentials)
+    producer = KafkaProducer(bootstrap_servers='localhost:9092')
+    message = b'x' * message_size
 
-    connection = pika.BlockingConnection(parameters)
-    channel = connection.channel()
-    channel.queue_declare(queue='bcc-tcc')
-
-    message = 'x' * message_size
     for i in range(count):
-        channel.basic_publish(exchange='', routing_key='bcc-tcc', body=message)
-        logging.info(f"Mensagem {i + 1} enviada com {message_size} bytes")
+        producer.send('bcc-tcc', message)
+        logging.info(f"Mensagem {i+1} enviada com {message_size} bytes")
         time.sleep(0.001)
 
-    connection.close()
+    producer.flush()
 
 if __name__ == "__main__":
     setup_logger()
