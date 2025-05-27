@@ -65,7 +65,10 @@ docker compose down
 
 Acesse o **RabbitMQ Management Interface** em:  
 http://localhost:15672  
-Credenciais padrão: `guest`/`guest`
+Credenciais padrão: `user`/`password`
+
+Acesse a **Interface Visual Kafdrop** para o **Apache Kafka** em:  
+http://localhost:9000
 
 Para ver os logs em tempo real:
 ```bash
