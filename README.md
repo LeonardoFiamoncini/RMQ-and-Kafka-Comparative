@@ -1,4 +1,4 @@
-# 🐇 RabbitMQ App - Message Queue Example
+# 🐇 RabbitMQ and Apache Kafka App - Message Queue Example
 
 Este projeto demonstra a configuração de um ambiente com RabbitMQ e Apache Kafka em Docker e scripts Python para produtor/consumidor de mensagens.
 
