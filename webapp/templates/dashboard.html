@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <title>Dashboard Comparativo</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            padding: 20px;
+            background-color: #f9f9f9;
+        }
+        h1 {
+            text-align: center;
+            margin-bottom: 40px;
+        }
+        .chart-container {
+            width: 90%;
+            margin: auto;
+            margin-bottom: 50px;
+            background: white;
+            border-radius: 8px;
+            padding: 20px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+    </style>
+</head>
+<body>
+    <h1>Comparativo de Desempenho: RabbitMQ vs Apache Kafka</h1>
+
+    <div class="chart-container">
+        <canvas id="latencyChart"></canvas>
+    </div>
+    <div class="chart-container">
+        <canvas id="throughputChart"></canvas>
+    </div>
+
+    <script>
+        const rabbitmqData = {{ rabbitmq|tojson }};
+        const kafkaData = {{ kafka|tojson }};
+
+        const labels = rabbitmqData.map(e => e.filename);
+
+        function parseMetric(data, metric) {
+            return data.map(e => parseFloat(e[metric] || 0));
+        }
+
+        const latencyChart = new Chart(
+            document.getElementById('latencyChart'), {
+                type: 'line',
+                data: {
+                    labels: labels,
+                    datasets: [
+                        {
+                            label: 'RabbitMQ - Latência Média (s)',
+                            data: parseMetric(rabbitmqData, 'avg_latency_sec'),
+                            borderColor: '#FF6600',
+                            fill: false
+                        },
+                        {
+                            label: 'Kafka - Latência Média (s)',
+                            data: parseMetric(kafkaData, 'avg_latency_sec'),
+                            borderColor: '#000000',
+                            fill: false
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    plugins: {
+                        title: {
+                            display: true,
+                            text: 'Latência Média por Execução'
+                        }
+                    }
+                }
+            }
+        );
+
+        const throughputChart = new Chart(
+            document.getElementById('throughputChart'), {
+                type: 'bar',
+                data: {
+                    labels: labels,
+                    datasets: [
+                        {
+                            label: 'RabbitMQ - Throughput (msg/s)',
+                            data: parseMetric(rabbitmqData, 'throughput_msgs_per_sec'),
+                            backgroundColor: '#FF6600'
+                        },
+                        {
+                            label: 'Kafka - Throughput (msg/s)',
+                            data: parseMetric(kafkaData, 'throughput_msgs_per_sec'),
+                            backgroundColor: '#000000'
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    plugins: {
+                        title: {
+                            display: true,
+                            text: 'Throughput por Execução'
+                        }
+                    }
+                }
+            }
+        );
+    </script>
+</body>
+</html>

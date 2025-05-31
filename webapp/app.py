@@ -1,6 +1,7 @@
 from flask import Flask, render_template, send_from_directory
 import os
 from subprocess import Popen
+import subprocess
 
 app = Flask(__name__, template_folder="templates", static_folder="static")
 
@@ -21,6 +22,15 @@ def send_kafka():
     kafka_producer = os.path.join(BASE_DIR, "kafka", "producer.py")
     Popen(["python", kafka_producer, "1000", "200"])
     return "Kafka: Envio de mensagens iniciado em background"
+
+@app.route("/benchmark/<tech>/<int:count>/<int:size>")
+def run_benchmark(tech, count, size):
+    benchmark_script = os.path.join(BASE_DIR, "benchmark_runner.py")
+    try:
+        subprocess.run(["python", benchmark_script, tech, str(count), str(size)], check=True)
+        return f"Benchmark com {tech} executado com sucesso!"
+    except subprocess.CalledProcessError:
+        return f"Erro ao executar benchmark com {tech}"
 
 @app.route('/media/<path:filename>')
 def media(filename):
