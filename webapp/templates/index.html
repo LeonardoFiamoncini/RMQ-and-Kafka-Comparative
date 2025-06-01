@@ -10,27 +10,33 @@
         <!-- Apache Kafka -->
         <div class="card">
             <img class="logo" src="/media/kafka.svg" alt="Apache Kafka Logo">
-            <br>
-            <button class="btn-kafka" onclick="location.href='/send-kafka'">Send - Apache Kafka</button>
-            <br><br>
-            <button class="btn-kafka" onclick="location.href='/benchmark/kafka/1000/200'">Benchmark - Apache Kafka</button>
-        </div>
-
-        <!-- Dashboard -->
-        <div class="card">
-            <img class="logo" src="/media/dashboard_icon.svg" alt="Dashboard Icon">
-            <br>
-            <button class="btn-dashboard" onclick="location.href='/dashboard'">📊 Ver Dashboard</button>
+            <form method="get" action="/send-kafka">
+                <label for="kafka_count">Mensagens:</label>
+                <input type="number" name="count" id="kafka_count" value="1000" min="1" required>
+                <label for="kafka_size">Tamanho (bytes):</label>
+                <input type="number" name="size" id="kafka_size" value="200" min="10" required>
+                <br>
+                <button type="submit" class="btn-kafka">Enviar - Apache Kafka</button>
+            </form>
         </div>
 
         <!-- RabbitMQ -->
         <div class="card">
             <img class="logo" src="/media/rabbitmq.svg" alt="RabbitMQ Logo">
-            <br>
-            <button class="btn-rabbit" onclick="location.href='/send-rabbitmq'">Send - RabbitMQ</button>
-            <br><br>
-            <button class="btn-rabbit" onclick="location.href='/benchmark/rabbitmq/1000/200'">Benchmark - RabbitMQ</button>
+            <form method="get" action="/send-rabbitmq">
+                <label for="rabbit_count">Mensagens:</label>
+                <input type="number" name="count" id="rabbit_count" value="1000" min="1" required>
+                <label for="rabbit_size">Tamanho (bytes):</label>
+                <input type="number" name="size" id="rabbit_size" value="200" min="10" required>
+                <br>
+                <button type="submit" class="btn-rabbit">Enviar - RabbitMQ</button>
+            </form>
         </div>
+    </div>
+
+    <!-- Benchmark Comparativo -->
+    <div class="benchmark">
+        <button class="btn-benchmark" onclick="location.href='/run-benchmark'">Benchmark Comparativo</button>
     </div>
 </body>
 </html>

@@ -2,110 +2,104 @@
 <html lang="pt-br">
 <head>
     <meta charset="UTF-8">
-    <title>Dashboard Comparativo</title>
+    <title>Dashboard de Métricas</title>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
         body {
             font-family: Arial, sans-serif;
+            background-color: #f4f4f4;
             padding: 20px;
-            background-color: #f9f9f9;
         }
-        h1 {
+        h2 {
             text-align: center;
-            margin-bottom: 40px;
         }
         .chart-container {
             width: 90%;
-            margin: auto;
-            margin-bottom: 50px;
-            background: white;
+            margin: 40px auto;
+            background-color: white;
             border-radius: 8px;
             padding: 20px;
-            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
         }
     </style>
 </head>
 <body>
-    <h1>Comparativo de Desempenho: RabbitMQ vs Apache Kafka</h1>
+    <h2>📊 Dashboard Comparativo Consolidado</h2>
 
     <div class="chart-container">
+        <h3>Latência Média (s)</h3>
         <canvas id="latencyChart"></canvas>
     </div>
+
     <div class="chart-container">
+        <h3>Latência P95 (s)</h3>
+        <canvas id="latency95Chart"></canvas>
+    </div>
+
+    <div class="chart-container">
+        <h3>Throughput (mensagens por segundo)</h3>
         <canvas id="throughputChart"></canvas>
     </div>
 
+    <div class="chart-container">
+        <h3>Uso de CPU (%)</h3>
+        <canvas id="cpuChart"></canvas>
+    </div>
+
+    <div class="chart-container">
+        <h3>Uso de Memória (MB)</h3>
+        <canvas id="memoryChart"></canvas>
+    </div>
+
     <script>
-        const rabbitmqData = {{ rabbitmq|tojson }};
-        const kafkaData = {{ kafka|tojson }};
+        const rabbit = {{ rabbit|tojson }};
+        const kafka = {{ kafka|tojson }};
 
-        const labels = rabbitmqData.map(e => e.filename);
-
-        function parseMetric(data, metric) {
-            return data.map(e => parseFloat(e[metric] || 0));
-        }
-
-        const latencyChart = new Chart(
-            document.getElementById('latencyChart'), {
+        function createLineChart(ctxId, label, data1, data2, timestamps) {
+            new Chart(document.getElementById(ctxId), {
                 type: 'line',
                 data: {
-                    labels: labels,
+                    labels: timestamps,
                     datasets: [
                         {
-                            label: 'RabbitMQ - Latência Média (s)',
-                            data: parseMetric(rabbitmqData, 'avg_latency_sec'),
+                            label: 'RabbitMQ',
+                            data: data1,
                             borderColor: '#FF6600',
-                            fill: false
+                            backgroundColor: 'rgba(255, 102, 0, 0.2)',
+                            fill: false,
+                            tension: 0.3
                         },
                         {
-                            label: 'Kafka - Latência Média (s)',
-                            data: parseMetric(kafkaData, 'avg_latency_sec'),
+                            label: 'Kafka',
+                            data: data2,
                             borderColor: '#000000',
-                            fill: false
+                            backgroundColor: 'rgba(0, 0, 0, 0.1)',
+                            fill: false,
+                            tension: 0.3
                         }
                     ]
                 },
                 options: {
-                    responsive: true,
-                    plugins: {
-                        title: {
-                            display: true,
-                            text: 'Latência Média por Execução'
-                        }
-                    }
-                }
-            }
-        );
-
-        const throughputChart = new Chart(
-            document.getElementById('throughputChart'), {
-                type: 'bar',
-                data: {
-                    labels: labels,
-                    datasets: [
-                        {
-                            label: 'RabbitMQ - Throughput (msg/s)',
-                            data: parseMetric(rabbitmqData, 'throughput_msgs_per_sec'),
-                            backgroundColor: '#FF6600'
+                    scales: {
+                        x: {
+                            title: { display: true, text: 'Execuções' },
+                            ticks: { autoSkip: true, maxTicksLimit: 10 }
                         },
-                        {
-                            label: 'Kafka - Throughput (msg/s)',
-                            data: parseMetric(kafkaData, 'throughput_msgs_per_sec'),
-                            backgroundColor: '#000000'
-                        }
-                    ]
-                },
-                options: {
-                    responsive: true,
-                    plugins: {
-                        title: {
-                            display: true,
-                            text: 'Throughput por Execução'
+                        y: {
+                            title: { display: true, text: label }
                         }
                     }
                 }
-            }
-        );
+            });
+        }
+
+        const timestamps = rabbit.timestamps.length > kafka.timestamps.length ? rabbit.timestamps : kafka.timestamps;
+
+        createLineChart("latencyChart", "Latência Média (s)", rabbit.latency_avg, kafka.latency_avg, timestamps);
+        createLineChart("latency95Chart", "Latência P95 (s)", rabbit.latency_95, kafka.latency_95, timestamps);
+        createLineChart("throughputChart", "Msgs/s", rabbit.throughput, kafka.throughput, timestamps);
+        createLineChart("cpuChart", "Uso de CPU (%)", rabbit.cpu, kafka.cpu, timestamps);
+        createLineChart("memoryChart", "Uso de Memória (MB)", rabbit.memory, kafka.memory, timestamps);
     </script>
 </body>
 </html>

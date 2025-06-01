@@ -89,6 +89,7 @@ requirements=(
     flask
     pika
     kafka-python
+    psutil
 )
 
 echo "➡️ Instalando: ${requirements[*]}"

@@ -1,7 +1,6 @@
-from flask import Flask, render_template, send_from_directory
+from flask import Flask, render_template, send_from_directory, request
 import os
 from subprocess import Popen
-import subprocess
 
 app = Flask(__name__, template_folder="templates", static_folder="static")
 
@@ -14,23 +13,24 @@ def index():
 @app.route("/send-rabbitmq")
 def send_rabbitmq():
     rabbitmq_producer = os.path.join(BASE_DIR, "rabbitmq", "producer.py")
-    Popen(["python", rabbitmq_producer, "1000", "200"])
-    return "RabbitMQ: Envio de mensagens iniciado em background"
+    count = request.args.get("count", default="1000")
+    size = request.args.get("size", default="200")
+    Popen(["python", rabbitmq_producer, count, size])
+    return f"RabbitMQ: Envio de {count} mensagens com {size} bytes iniciado."
 
 @app.route("/send-kafka")
 def send_kafka():
     kafka_producer = os.path.join(BASE_DIR, "kafka", "producer.py")
-    Popen(["python", kafka_producer, "1000", "200"])
-    return "Kafka: Envio de mensagens iniciado em background"
+    count = request.args.get("count", default="1000")
+    size = request.args.get("size", default="200")
+    Popen(["python", kafka_producer, count, size])
+    return f"Kafka: Envio de {count} mensagens com {size} bytes iniciado."
 
-@app.route("/benchmark/<tech>/<int:count>/<int:size>")
-def run_benchmark(tech, count, size):
+@app.route("/run-benchmark")
+def run_benchmark():
     benchmark_script = os.path.join(BASE_DIR, "benchmark_runner.py")
-    try:
-        subprocess.run(["python", benchmark_script, tech, str(count), str(size)], check=True)
-        return f"Benchmark com {tech} executado com sucesso!"
-    except subprocess.CalledProcessError:
-        return f"Erro ao executar benchmark com {tech}"
+    Popen(["python", benchmark_script, "--count", "1000", "--size", "200"])
+    return "🏁 Benchmark comparativo iniciado em background"
 
 @app.route('/media/<path:filename>')
 def media(filename):
