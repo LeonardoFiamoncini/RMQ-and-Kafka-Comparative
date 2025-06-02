@@ -13,36 +13,43 @@
     </nav>
 
     <div class="container">
-        <!-- Apache Kafka -->
+        <!-- Apache Kafka Benchmark -->
         <div class="card">
             <img class="logo" src="/media/kafka.svg" alt="Apache Kafka Logo">
-            <form method="get" action="/send-kafka">
+            <form method="get" action="/benchmark-kafka">
                 <label for="kafka_count">Mensagens:</label>
                 <input type="number" name="count" id="kafka_count" value="1000" min="1" required>
                 <label for="kafka_size">Tamanho (bytes):</label>
                 <input type="number" name="size" id="kafka_size" value="200" min="10" required>
                 <br><br>
-                <button type="submit" class="btn-kafka">Enviar - Apache Kafka</button>
+                <button type="submit" class="btn-kafka">Benchmark - Apache Kafka</button>
             </form>
         </div>
 
-        <!-- RabbitMQ -->
+        <!-- RabbitMQ Benchmark -->
         <div class="card">
             <img class="logo" src="/media/rabbitmq.svg" alt="RabbitMQ Logo">
-            <form method="get" action="/send-rabbitmq">
+            <form method="get" action="/benchmark-rabbitmq">
                 <label for="rabbit_count">Mensagens:</label>
                 <input type="number" name="count" id="rabbit_count" value="1000" min="1" required>
                 <label for="rabbit_size">Tamanho (bytes):</label>
                 <input type="number" name="size" id="rabbit_size" value="200" min="10" required>
                 <br><br>
-                <button type="submit" class="btn-rabbit">Enviar - RabbitMQ</button>
+                <button type="submit" class="btn-rabbit">Benchmark - RabbitMQ</button>
             </form>
         </div>
-    </div>
 
-    <!-- Benchmark Comparativo -->
-    <div class="benchmark">
-        <button class="btn-benchmark" onclick="location.href='/run-benchmark'">Benchmark Comparativo</button>
+        <!-- Benchmark Comparativo -->
+        <div class="card" style="width: 100%; text-align: center;">
+            <form method="get" action="/run-benchmark">
+                <label for="total_count">Mensagens:</label>
+                <input type="number" name="count" id="total_count" value="1000" min="1" required>
+                <label for="total_size">Tamanho (bytes):</label>
+                <input type="number" name="size" id="total_size" value="200" min="10" required>
+                <br><br>
+                <button class="btn-benchmark" type="submit">Benchmark Comparativo</button>
+            </form>
+        </div>
     </div>
 </body>
 </html>

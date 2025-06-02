@@ -108,7 +108,12 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Executa benchmark comparativo RabbitMQ vs Kafka")
     parser.add_argument("--count", type=int, default=1000, help="Quantidade de mensagens")
     parser.add_argument("--size", type=int, default=200, help="Tamanho de cada mensagem (bytes)")
+    parser.add_argument("--only", choices=["kafka", "rabbitmq", "both"], default="both", help="Executar benchmark apenas para uma fila")
     args = parser.parse_args()
 
-    run_all_benchmarks(count=args.count, size=args.size)
+    if args.only == "both":
+        run_all_benchmarks(count=args.count, size=args.size)
+    else:
+        run_benchmark(args.only, count=args.count, size=args.size)
+
     print("\n📊 Resultados salvos em logs/<tech>/benchmark_results.csv")

@@ -43,27 +43,29 @@ def read_benchmark_file(filepath):
 def index():
     return render_template("index.html")
 
-@app.route("/send-rabbitmq")
-def send_rabbitmq():
-    rabbitmq_producer = os.path.join(BASE_DIR, "rabbitmq", "producer.py")
+@app.route("/benchmark-rabbitmq")
+def benchmark_rabbitmq():
+    script_path = os.path.join(BASE_DIR, "benchmark_runner.py")
     count = request.args.get("count", default="1000")
     size = request.args.get("size", default="200")
-    Popen(["python", rabbitmq_producer, count, size])
-    return f"RabbitMQ: Envio de {count} mensagens com {size} bytes iniciado."
+    Popen(["python", script_path, "--only", "rabbitmq", "--count", count, "--size", size])
+    return "🏁 Benchmark exclusivo do RabbitMQ iniciado."
 
-@app.route("/send-kafka")
-def send_kafka():
-    kafka_producer = os.path.join(BASE_DIR, "kafka", "producer.py")
+@app.route("/benchmark-kafka")
+def benchmark_kafka():
+    script_path = os.path.join(BASE_DIR, "benchmark_runner.py")
     count = request.args.get("count", default="1000")
     size = request.args.get("size", default="200")
-    Popen(["python", kafka_producer, count, size])
-    return f"Kafka: Envio de {count} mensagens com {size} bytes iniciado."
+    Popen(["python", script_path, "--only", "kafka", "--count", count, "--size", size])
+    return "🏁 Benchmark exclusivo do Apache Kafka iniciado."
 
 @app.route("/run-benchmark")
 def run_benchmark():
-    benchmark_script = os.path.join(BASE_DIR, "benchmark_runner.py")
-    Popen(["python", benchmark_script, "--count", "1000", "--size", "200"])
-    return "🏁 Benchmark comparativo iniciado em background"
+    script_path = os.path.join(BASE_DIR, "benchmark_runner.py")
+    count = request.args.get("count", default="1000")
+    size = request.args.get("size", default="200")
+    Popen(["python", script_path, "--count", count, "--size", size])
+    return "🏁 Benchmark comparativo iniciado."
 
 @app.route('/media/<path:filename>')
 def media(filename):
