@@ -3,13 +3,9 @@
 <head>
     <meta charset="UTF-8">
     <title>Dashboard de Métricas</title>
+    <link rel="stylesheet" href="/static/styles.css">
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
-        body {
-            font-family: Arial, sans-serif;
-            background-color: #f4f4f4;
-            padding: 20px;
-        }
         h2 {
             text-align: center;
         }
@@ -21,20 +17,12 @@
             padding: 20px;
             box-shadow: 0 4px 6px rgba(0,0,0,0.1);
         }
-        nav {
-            background: #eee;
-            padding: 10px;
-            text-align: center;
-        }
-        nav a {
-            margin: 0 20px;
-        }
     </style>
 </head>
 <body>
     <!-- Menu de Navegação -->
-    <nav>
-        <a href="/">🏠 Home</a>
+    <nav style="background: #eee; padding: 10px; text-align: center;">
+        <a href="/" style="margin-right: 20px;">🏠 Home</a>
         <a href="/dashboard">📊 Dashboard</a>
     </nav>
 
