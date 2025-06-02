@@ -60,9 +60,6 @@ def callback(ch, method, properties, body):
 
     total_received += 1
 
-    if total_received >= len(send_times):
-        ch.stop_consuming()
-
 def start_consumer():
     credentials = pika.PlainCredentials('user', 'password')
     parameters = pika.ConnectionParameters('localhost', 5672, '/', credentials)

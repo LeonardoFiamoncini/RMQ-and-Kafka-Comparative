@@ -63,7 +63,7 @@ def start_consumer():
 
         total_received += 1
 
-        if total_received >= len(send_times):
+        if not msg_id:
             break
 
     end_consume = time.time()

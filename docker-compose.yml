@@ -40,7 +40,7 @@ services:
     healthcheck:
       test: ["CMD", "kafka-topics.sh", "--list", "--bootstrap-server", "localhost:9092"]
       interval: 10s
-      timeout: 5s
+      timeout: 10s
       retries: 5
 
   kafdrop:
