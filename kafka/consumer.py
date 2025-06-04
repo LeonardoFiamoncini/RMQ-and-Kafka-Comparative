@@ -38,6 +38,7 @@ except FileNotFoundError:
     send_times = {}
 
 def save_results():
+    global latencies, total_received, start_consume, end_consume
     with open(LATENCY_FILE, 'w', newline='') as f:
         writer = csv.writer(f)
         writer.writerow(['msg_id', 'latency_seconds'])
@@ -61,6 +62,7 @@ def signal_handler(sig, frame):
     sys.exit(0)
 
 def start_consumer(expected_count=1000):
+    global start_consume, end_consume, latencies, total_received
     signal.signal(signal.SIGINT, signal_handler)
     consumer = KafkaConsumer(
         'bcc-tcc',
