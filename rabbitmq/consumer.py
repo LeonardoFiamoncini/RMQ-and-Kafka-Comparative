@@ -5,20 +5,19 @@ import os
 import json
 import time
 import csv
+import signal
+import sys
 
-# Definir o diretório base absoluto
 BASE_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
 LOG_DIR = os.path.join(BASE_DIR, "logs", "rabbitmq")
 os.makedirs(LOG_DIR, exist_ok=True)
 
-# Nome dos arquivos de log
 DATE_STR = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
 CONSUMER_LOG = os.path.join(LOG_DIR, f"{DATE_STR}_consumer-queue.txt")
 LATENCY_FILE = os.path.join(LOG_DIR, f"{DATE_STR}_latency.csv")
 SUMMARY_FILE = os.path.join(LOG_DIR, f"{DATE_STR}_summary.csv")
 SEND_TIMES_FILE = os.path.join(LOG_DIR, f"{DATE_STR}_send_times.json")
 
-# Setup do logger
 logging.basicConfig(
     filename=CONSUMER_LOG,
     filemode="a",
@@ -29,8 +28,8 @@ logging.basicConfig(
 latencies = []
 total_received = 0
 start_consume = None
+end_consume = None
 
-# Carrega tempos de envio para cálculo de latência
 try:
     with open(SEND_TIMES_FILE, 'r') as f:
         send_times = json.load(f)
@@ -38,8 +37,9 @@ except FileNotFoundError:
     logging.error("Arquivo de tempos de envio não encontrado.")
     send_times = {}
 
+
 def callback(ch, method, properties, body):
-    global total_received, latencies, start_consume
+    global total_received, latencies, start_consume, end_consume
     recv_time = time.time()
     if start_consume is None:
         start_consume = recv_time
@@ -59,8 +59,36 @@ def callback(ch, method, properties, body):
         logging.warning(f"Mensagem {msg_id} recebida sem timestamp correspondente")
 
     total_received += 1
+    end_consume = recv_time
 
-def start_consumer():
+
+def save_results():
+    with open(LATENCY_FILE, 'w', newline='') as f:
+        writer = csv.writer(f)
+        writer.writerow(['msg_id', 'latency_seconds'])
+        writer.writerows(latencies)
+
+    duration = end_consume - start_consume if end_consume and start_consume else 0
+    throughput = total_received / duration if duration > 0 else 0
+    avg_latency = sum(lat for _, lat in latencies) / len(latencies) if latencies else 0
+
+    with open(SUMMARY_FILE, 'w', newline='') as f:
+        writer = csv.writer(f)
+        writer.writerow(['metric', 'value'])
+        writer.writerow(['total_received', total_received])
+        writer.writerow(['consume_duration_sec', duration])
+        writer.writerow(['avg_latency_sec', avg_latency])
+        writer.writerow(['throughput_msgs_per_sec', throughput])
+
+
+def signal_handler(sig, frame):
+    print('\n[!] Interrompido pelo usuário. Salvando resultados...')
+    save_results()
+    sys.exit(0)
+
+
+def start_consumer(expected_count=1000):
+    signal.signal(signal.SIGINT, signal_handler)
     credentials = pika.PlainCredentials('user', 'password')
     parameters = pika.ConnectionParameters('localhost', 5672, '/', credentials)
 
@@ -69,25 +97,20 @@ def start_consumer():
     channel.queue_declare(queue='bcc-tcc')
 
     channel.basic_consume(queue='bcc-tcc', on_message_callback=callback, auto_ack=True)
-    print('[*] Aguardando mensagens. Pressione CTRL+C para sair')
-    channel.start_consuming()
+    print(f'[*] Aguardando até {expected_count} mensagens. Pressione CTRL+C para sair')
 
-    end_consume = time.time()
+    try:
+        channel.start_consuming()
+    except KeyboardInterrupt:
+        channel.stop_consuming()
 
-    # Salva latências
-    with open(LATENCY_FILE, 'w', newline='') as f:
-        writer = csv.writer(f)
-        writer.writerow(['msg_id', 'latency_seconds'])
-        writer.writerows(latencies)
+    if total_received >= expected_count:
+        channel.stop_consuming()
 
-    # Salva resumo
-    with open(SUMMARY_FILE, 'a', newline='') as f:
-        writer = csv.writer(f)
-        writer.writerow(['total_received', total_received])
-        writer.writerow(['consume_duration_sec', end_consume - start_consume])
-        avg_latency = sum(lat for _, lat in latencies) / len(latencies) if latencies else 0
-        writer.writerow(['avg_latency_sec', avg_latency])
-        writer.writerow(['throughput_msgs_per_sec', total_received / (end_consume - start_consume)])
+    connection.close()
+    save_results()
+
 
 if __name__ == "__main__":
-    start_consumer()
+    expected_count = int(sys.argv[1]) if len(sys.argv) > 1 else 1000
+    start_consumer(expected_count)

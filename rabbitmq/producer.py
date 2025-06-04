@@ -6,19 +6,16 @@ from datetime import datetime
 import os
 import json
 
-# Diretório base absoluto
 BASE_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
 LOG_DIR = os.path.join(BASE_DIR, 'logs', 'rabbitmq')
 os.makedirs(LOG_DIR, exist_ok=True)
 
-# Nome dos arquivos de log
 DATE_STR = datetime.now().strftime('%Y-%m-%d_%H-%M-%S')
 LATENCY_FILE = os.path.join(LOG_DIR, f'{DATE_STR}_latency.csv')
 SUMMARY_FILE = os.path.join(LOG_DIR, f'{DATE_STR}_summary.csv')
 PRODUCER_LOG = os.path.join(LOG_DIR, f'{DATE_STR}_producer-queue.txt')
 SEND_TIMES_FILE = os.path.join(LOG_DIR, f'{DATE_STR}_send_times.json')
 
-# Configurar logger
 logging.basicConfig(
     filename=PRODUCER_LOG,
     filemode="a",
@@ -36,8 +33,9 @@ def send_messages(count=1000, message_size=100):
     connection = pika.BlockingConnection(parameters)
     channel = connection.channel()
     channel.queue_declare(queue='bcc-tcc')
+    channel.confirm_delivery()
 
-    message_content = 'x' * (message_size - 10)  # reserva para o overhead JSON
+    message_content = 'x' * (message_size - 10)
     start_send = time.time()
 
     for i in range(count):
@@ -45,18 +43,18 @@ def send_messages(count=1000, message_size=100):
         payload = {"id": msg_id, "body": message_content}
         body = json.dumps(payload)
         send_times[msg_id] = time.time()
-        channel.basic_publish(exchange='', routing_key='bcc-tcc', body=body)
-        logging.info(f"Mensagem {msg_id} enviada com {message_size} bytes")
-        time.sleep(0.001)
+        try:
+            channel.basic_publish(exchange='', routing_key='bcc-tcc', body=body, mandatory=True)
+            logging.info(f"Mensagem {msg_id} enviada com {message_size} bytes")
+        except pika.exceptions.UnroutableError:
+            logging.error(f"Falha ao enviar mensagem {msg_id}")
 
     connection.close()
     end_send = time.time()
 
-    # Salva os tempos de envio
     with open(SEND_TIMES_FILE, 'w') as f:
         json.dump(send_times, f)
 
-    # Escreve sumário
     with open(SUMMARY_FILE, 'w', newline='') as f:
         import csv
         writer = csv.writer(f)
