@@ -1,4 +1,5 @@
-from kafka import KafkaProducer
+from kafka import KafkaProducer, KafkaAdminClient
+from kafka.admin import ConfigResource, ConfigResourceType, NewTopic
 import sys
 import time
 import logging
@@ -23,14 +24,72 @@ logging.basicConfig(
     level=logging.INFO
 )
 
+def create_topic_for_queue_mode(topic_name='bcc-tcc', num_partitions=3, replication_factor=1):
+    """
+    Cria um tópico configurado para Queue Mode (Share Groups) do Kafka 4.0
+    """
+    try:
+        admin_client = KafkaAdminClient(
+            bootstrap_servers='localhost:9092',
+            client_id='queue_mode_admin'
+        )
+        
+        # Verificar se o tópico já existe
+        existing_topics = admin_client.list_topics()
+        if topic_name in existing_topics:
+            logging.info(f"Tópico {topic_name} já existe")
+            admin_client.close()
+            return True
+        
+        # Criar novo tópico com configurações para Queue Mode
+        topic = NewTopic(
+            name=topic_name,
+            num_partitions=num_partitions,
+            replication_factor=replication_factor,
+            topic_configs={
+                # Configurações específicas para Queue Mode/Share Groups
+                'cleanup.policy': 'delete',
+                'retention.ms': '604800000',  # 7 dias
+                'segment.ms': '604800000',    # 7 dias
+                'compression.type': 'gzip'
+            }
+        )
+        
+        # Criar o tópico
+        fs = admin_client.create_topics([topic])
+        try:
+            # Aguardar a criação do tópico
+            for topic_name, f in fs.items():
+                f.result()  # Aguardar a criação
+                logging.info(f"Tópico {topic_name} criado com sucesso para Queue Mode")
+        except Exception as e:
+            logging.error(f"Erro ao criar tópico {topic_name}: {e}")
+            return False
+        
+        admin_client.close()
+        return True
+        
+    except Exception as e:
+        logging.error(f"Erro na criação do tópico: {e}")
+        return False
+
 def send_messages(count=1000, message_size=100):
     from collections import OrderedDict
+
+    # Criar tópico para Queue Mode antes de enviar mensagens
+    if not create_topic_for_queue_mode():
+        logging.error("Falha ao criar tópico para Queue Mode")
+        return
 
     send_times = OrderedDict()
     producer = KafkaProducer(
         bootstrap_servers='localhost:9092',
         value_serializer=lambda v: json.dumps(v).encode('utf-8'),
-        acks='all'  # Confirmação de todos os brokers
+        acks='all',  # Confirmação de todos os brokers
+        # Configurações específicas para Queue Mode
+        retries=3,
+        retry_backoff_ms=100,
+        max_in_flight_requests_per_connection=1  # Garantir ordenação
     )
 
     message_content = 'x' * (message_size - 10)
