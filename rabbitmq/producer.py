@@ -32,7 +32,7 @@ def send_messages(count=1000, message_size=100):
 
     connection = pika.BlockingConnection(parameters)
     channel = connection.channel()
-    channel.queue_declare(queue='bcc-tcc')
+    channel.queue_declare(queue='bcc-tcc', durable=True, arguments={'x-queue-type': 'quorum'})
     channel.confirm_delivery()
 
     message_content = 'x' * (message_size - 10)

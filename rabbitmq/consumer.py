@@ -94,7 +94,7 @@ def start_consumer(expected_count=1000):
 
     connection = pika.BlockingConnection(parameters)
     channel = connection.channel()
-    channel.queue_declare(queue='bcc-tcc')
+    channel.queue_declare(queue='bcc-tcc', durable=True, arguments={'x-queue-type': 'quorum'})
 
     channel.basic_consume(queue='bcc-tcc', on_message_callback=callback, auto_ack=True)
     print(f'[*] Aguardando até {expected_count} mensagens. Pressione CTRL+C para sair')
