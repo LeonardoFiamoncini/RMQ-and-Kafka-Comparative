@@ -73,7 +73,7 @@ def create_topic_for_queue_mode(topic_name='bcc-tcc', num_partitions=3, replicat
         logging.error(f"Erro na criação do tópico: {e}")
         return False
 
-def send_messages(count=1000, message_size=100):
+def send_messages(count=1000, message_size=100, rps=None):
     from collections import OrderedDict
 
     # Criar tópico para Queue Mode antes de enviar mensagens
@@ -94,6 +94,12 @@ def send_messages(count=1000, message_size=100):
 
     message_content = 'x' * (message_size - 10)
     start_send = time.time()
+    
+    # Calcular intervalo de sleep para Rate Limiting
+    sleep_interval = 0
+    if rps and rps > 0:
+        sleep_interval = 1.0 / rps
+        logging.info(f"Rate Limiting ativado: {rps} RPS (intervalo: {sleep_interval:.6f}s)")
 
     for i in range(count):
         msg_id = str(i)
@@ -105,6 +111,10 @@ def send_messages(count=1000, message_size=100):
             logging.info(f"Mensagem {msg_id} enviada com {message_size} bytes")
         except Exception as e:
             logging.error(f"Falha ao enviar mensagem {msg_id}: {e}")
+        
+        # Rate Limiting: aguardar o intervalo calculado
+        if sleep_interval > 0:
+            time.sleep(sleep_interval)
 
     producer.flush()
     end_send = time.time()
@@ -115,10 +125,15 @@ def send_messages(count=1000, message_size=100):
         writer.writerow(['metric', 'value'])
         writer.writerow(['total_sent', count])
         writer.writerow(['send_duration_sec', end_send - start_send])
+        if rps:
+            writer.writerow(['target_rps', rps])
+            actual_rps = count / (end_send - start_send)
+            writer.writerow(['actual_rps', actual_rps])
 
     json.dump(send_times, open(SEND_TIMES_FILE, 'w'))
 
 if __name__ == "__main__":
     count = int(sys.argv[1]) if len(sys.argv) > 1 else 1000
     size = int(sys.argv[2]) if len(sys.argv) > 2 else 100
-    send_messages(count, size)
+    rps = int(sys.argv[3]) if len(sys.argv) > 3 else None
+    send_messages(count, size, rps)
