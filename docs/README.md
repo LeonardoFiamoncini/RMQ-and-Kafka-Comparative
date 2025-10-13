@@ -1,331 +1,970 @@
-# 🚀 RabbitMQ vs Apache Kafka - Comparative Benchmark
+# 🎓 RabbitMQ vs Apache Kafka - Benchmark Comparativo para TCC
 
-Este projeto implementa um sistema completo de benchmark comparativo entre **RabbitMQ** e **Apache Kafka**, incluindo uma baseline HTTP síncrona para comparação de performance. O sistema foi desenvolvido seguindo as melhores práticas de engenharia de software e inclui funcionalidades avançadas como rate limiting, chaos engineering e monitoramento de recursos.
+**Trabalho de Conclusão de Curso (TCC) - Bacharelado em Ciência da Computação**
 
-## 🎯 Objetivos do Projeto
+Este projeto implementa um sistema completo de benchmark comparativo entre **RabbitMQ**, **Apache Kafka** e **HTTP Síncrono**, desenvolvido para análise de performance, tolerância a falhas e escalabilidade de sistemas de mensageria. O sistema foi projetado seguindo rigorosos padrões acadêmicos e de engenharia de software.
 
-- **Comparação de Performance**: Benchmark detalhado entre RabbitMQ, Kafka e HTTP síncrono
-- **Tolerância a Falhas**: Testes automatizados de recuperação e disponibilidade
-- **Escalabilidade**: Suporte a múltiplos produtores e consumidores concorrentes
-- **Monitoramento**: Coleta de métricas de recursos e performance em tempo real
-- **Análise de Latência**: Medição precisa de tempos de resposta end-to-end
+## 📋 Índice
 
-## 📋 Pré-requisitos
+1. [Visão Geral do Projeto](#-visão-geral-do-projeto)
+2. [Pré-requisitos do Sistema](#-pré-requisitos-do-sistema)
+3. [Instalação Completa](#-instalação-completa)
+4. [Configuração do Ambiente](#-configuração-do-ambiente)
+5. [Execução de Todos os Testes](#-execução-de-todos-os-testes)
+6. [Análise e Visualização dos Resultados](#-análise-e-visualização-dos-resultados)
+7. [Interpretação dos Resultados](#-interpretação-dos-resultados)
+8. [Solução de Problemas](#-solução-de-problemas)
+9. [Documentação Técnica](#-documentação-técnica)
 
-- **Sistema Operacional**: Ubuntu 24.04 LTS (ou similar)
-- **Docker**: Versão 20.10+ com Docker Compose
-- **Python**: 3.10+ com pip
-- **Recursos**: Mínimo 4GB RAM, 2 CPU cores
+---
 
-## 🚀 Configuração Rápida
+## 🎯 Visão Geral do Projeto
 
-### 1. Configuração Automática do Ambiente
+### Objetivos Acadêmicos
+- **Comparação Quantitativa**: Análise estatística de performance entre RabbitMQ, Kafka e HTTP
+- **Tolerância a Falhas**: Avaliação de recuperação e disponibilidade em cenários de falha
+- **Escalabilidade**: Teste de comportamento com múltiplos clientes concorrentes
+- **Reprodutibilidade**: Metodologia científica rigorosa para replicação dos resultados
+
+### Tecnologias Implementadas
+- **RabbitMQ 4.1.1**: Com Quorum Queues e cluster de 3 nós
+- **Apache Kafka 4.0**: Com KRaft mode e Queue Mode (KIP-932)
+- **HTTP Síncrono**: Baseline para comparação de latência
+- **Docker**: Containerização completa da infraestrutura
+- **Python 3.12**: Implementação dos clientes e orquestração
+
+### Métricas Coletadas
+- **Latência End-to-End**: Tempo total de envio até processamento
+- **Throughput**: Mensagens processadas por segundo
+- **Taxa de Sucesso**: Percentual de entrega garantida
+- **Uso de Recursos**: CPU e memória dos brokers
+- **Tempo de Recuperação**: Após falhas simuladas
+
+---
+
+## 🖥️ Pré-requisitos do Sistema
+
+### Especificações Mínimas
+- **Sistema Operacional**: Ubuntu 22.04 LTS ou superior
+- **RAM**: Mínimo 4GB (recomendado 8GB)
+- **CPU**: Mínimo 2 cores (recomendado 4 cores)
+- **Armazenamento**: Mínimo 10GB livres
+- **Rede**: Conexão com internet para download de dependências
+
+### Software Necessário
+- **Docker**: Versão 20.10 ou superior
+- **Docker Compose**: Versão 2.0 ou superior
+- **Python**: Versão 3.10 ou superior
+- **Git**: Para clonagem do repositório
+- **Curl**: Para testes de conectividade
+
+### Verificação dos Pré-requisitos
 ```bash
-# Dar permissão de execução e rodar o script
+# Verificar versão do Ubuntu
+lsb_release -a
+
+# Verificar RAM disponível
+free -h
+
+# Verificar CPU
+lscpu | grep "CPU(s):"
+
+# Verificar espaço em disco
+df -h
+
+# Verificar Docker
+docker --version
+docker compose version
+
+# Verificar Python
+python3 --version
+pip3 --version
+```
+
+---
+
+## 🚀 Instalação Completa
+
+### Passo 1: Clonagem do Repositório
+```bash
+# Navegar para o diretório desejado
+cd ~/Documentos
+
+# Clonar o repositório
+git clone <URL_DO_REPOSITORIO>
+cd RMQ-and-Kafka-Comparative
+
+# Verificar estrutura do projeto
+ls -la
+```
+
+### Passo 2: Configuração Automática do Ambiente
+```bash
+# Dar permissões de execução
 chmod +x scripts/setup_dev_environment.sh
+
+# Executar configuração automática
 ./scripts/setup_dev_environment.sh
 ```
 
-### 2. Ativar Ambiente Virtual
+**⚠️ IMPORTANTE**: Durante a execução do script:
+- Digite sua senha quando solicitado
+- Aguarde a instalação do Docker (pode demorar alguns minutos)
+- **REINICIE O TERMINAL** após a conclusão para aplicar permissões do Docker
+
+### Passo 3: Verificação da Instalação
 ```bash
+# Verificar se o usuário está no grupo docker
+groups | grep docker
+
+# Se não aparecer "docker", reinicie o terminal e tente novamente
+
+# Ativar ambiente virtual
 source venv/bin/activate
+
+# Verificar instalação das dependências
+pip list | grep -E "(flask|pika|kafka-python|requests|black|isort|flake8)"
 ```
 
-### 3. Iniciar Infraestrutura
+### Passo 4: Inicialização da Infraestrutura
 ```bash
+# Iniciar todos os serviços
 docker compose up -d
-```
 
-### 4. Verificar Serviços
-```bash
+# Aguardar inicialização (30-60 segundos)
+sleep 60
+
 # Verificar status dos containers
 docker compose ps
-
-# Ver logs em tempo real
-docker compose logs -f
 ```
 
-## 🧪 Executando Benchmarks
+**Resultado esperado**: Todos os containers devem estar com status "Up"
 
-### Comando Principal
-O sistema utiliza o `main.py` como ponto de entrada único:
+---
+
+## ⚙️ Configuração do Ambiente
+
+### Verificação dos Serviços
+
+#### 1. RabbitMQ Cluster (3 nós)
+```bash
+# Verificar cluster RabbitMQ
+docker exec rabbitmq-1 rabbitmqctl cluster_status
+
+# Verificar filas
+docker exec rabbitmq-1 rabbitmqctl list_queues
+
+# Acessar interface web
+echo "RabbitMQ Management: http://localhost:15672"
+echo "Usuário: user | Senha: password"
+```
+
+#### 2. Apache Kafka
+```bash
+# Verificar tópicos Kafka
+docker exec kafka kafka-topics.sh --list --bootstrap-server localhost:9092
+
+# Verificar brokers
+docker exec kafka kafka-broker-api-versions.sh --bootstrap-server localhost:9092
+
+# Acessar interface web
+echo "Kafdrop: http://localhost:9000"
+```
+
+#### 3. Teste de Conectividade
+```bash
+# Testar RabbitMQ
+curl -u user:password http://localhost:15672/api/overview
+
+# Testar Kafka (via Kafdrop)
+curl -s http://localhost:9000 | grep -i kafdrop
+
+# Testar baseline HTTP (será iniciado nos testes)
+```
+
+---
+
+## 🧪 Execução de Todos os Testes
+
+### Estrutura dos Testes
+
+O sistema executa **8 categorias principais de testes**, cada uma validando aspectos específicos da aplicação:
+
+1. **Testes Básicos de Funcionalidade**
+2. **Testes de Rate Limiting (RPS)**
+3. **Testes de Múltiplos Clientes**
+4. **Testes de Chaos Engineering**
+5. **Testes de Monitoramento**
+6. **Testes Integrados**
+7. **Testes de Baseline HTTP**
+8. **Testes de Performance Comparativa**
+
+### Execução Sequencial de Todos os Testes
+
+#### **TESTE 1: Validação Básica dos Brokers**
 
 ```bash
-# Benchmark completo (todos os brokers)
-python main.py --count 100 --size 1024
+# Ativar ambiente virtual
+source venv/bin/activate
 
-# Benchmark específico
-python main.py --only kafka --count 50 --size 512
-python main.py --only rabbitmq --count 50 --size 512
-python main.py --only baseline --count 50 --size 512
+# Teste 1.1: Baseline HTTP
+echo "=== TESTE 1.1: Baseline HTTP ==="
+python main.py --count 10 --size 200 --only baseline
 
-# Com rate limiting
-python main.py --count 100 --rps 10
+# Teste 1.2: RabbitMQ
+echo "=== TESTE 1.2: RabbitMQ ==="
+python main.py --count 8 --size 150 --only rabbitmq
 
-# Múltiplos clientes
-python main.py --count 200 --producers 4 --consumers 2
-
-# Chaos engineering
-python main.py --chaos --count 50 --chaos-delay 15
+# Teste 1.3: Kafka
+echo "=== TESTE 1.3: Kafka ==="
+python main.py --count 8 --size 150 --only kafka
 ```
 
-### Parâmetros Disponíveis
-- `--count`: Número de mensagens (padrão: 100)
-- `--size`: Tamanho das mensagens em bytes (padrão: 1024)
-- `--rps`: Rate limiting em mensagens por segundo
-- `--producers`: Número de produtores concorrentes (padrão: 1)
-- `--consumers`: Número de consumidores concorrentes (padrão: 1)
-- `--only`: Broker específico (kafka, rabbitmq, baseline)
-- `--chaos`: Ativar experimentos de tolerância a falhas
-- `--chaos-delay`: Delay antes de causar falha (segundos)
+**✅ Critério de Sucesso**: Todos os testes devem mostrar "✅ Benchmark finalizado" sem erros.
 
-## 🔧 Funcionalidades Avançadas
+#### **TESTE 2: Rate Limiting (RPS)**
 
-### 1. Baseline HTTP Síncrona
 ```bash
-# Iniciar servidor baseline
-python main.py --server --port 5000
+# Teste 2.1: Baseline com RPS
+echo "=== TESTE 2.1: Baseline com Rate Limiting ==="
+python main.py --count 8 --size 100 --rps 3 --only baseline
 
-# Testar cliente baseline
-python main.py --only baseline --count 10
+# Teste 2.2: RabbitMQ com RPS
+echo "=== TESTE 2.2: RabbitMQ com Rate Limiting ==="
+python main.py --count 6 --size 100 --rps 2 --only rabbitmq
+
+# Teste 2.3: Kafka com RPS
+echo "=== TESTE 2.3: Kafka com Rate Limiting ==="
+python main.py --count 6 --size 100 --rps 2 --only kafka
 ```
 
-### 2. Rate Limiting (RPS)
+**✅ Critério de Sucesso**: Throughput deve estar próximo ao RPS especificado.
+
+#### **TESTE 3: Múltiplos Clientes Concorrentes**
+
 ```bash
-# Teste com 5 mensagens por segundo
-python main.py --count 20 --rps 5
+# Teste 3.1: Baseline com múltiplos clientes
+echo "=== TESTE 3.1: Baseline - Múltiplos Clientes ==="
+python main.py --count 12 --size 100 --producers 3 --consumers 2 --only baseline
+
+# Teste 3.2: RabbitMQ com múltiplos clientes
+echo "=== TESTE 3.2: RabbitMQ - Múltiplos Clientes ==="
+python main.py --count 8 --size 100 --producers 2 --consumers 2 --only rabbitmq
+
+# Teste 3.3: Kafka com múltiplos clientes
+echo "=== TESTE 3.3: Kafka - Múltiplos Clientes ==="
+python main.py --count 8 --size 100 --producers 2 --consumers 2 --only kafka
 ```
 
-### 3. Múltiplos Clientes Concorrentes
+**✅ Critério de Sucesso**: Throughput deve aumentar proporcionalmente ao número de clientes.
+
+#### **TESTE 4: Chaos Engineering (Tolerância a Falhas)**
+
 ```bash
-# 3 produtores e 2 consumidores
-python main.py --count 60 --producers 3 --consumers 2
+# Teste 4.1: Chaos Engineering - RabbitMQ
+echo "=== TESTE 4.1: Chaos Engineering - RabbitMQ ==="
+python main.py --chaos --count 5 --size 100 --only rabbitmq
+
+# Aguardar recuperação
+sleep 30
+
+# Teste 4.2: Chaos Engineering - Kafka
+echo "=== TESTE 4.2: Chaos Engineering - Kafka ==="
+python main.py --chaos --count 5 --size 100 --only kafka
+
+# Aguardar recuperação
+sleep 30
 ```
 
-### 4. Chaos Engineering
+**✅ Critério de Sucesso**: Sistema deve se recuperar automaticamente após falhas.
+
+#### **TESTE 5: Monitoramento de Recursos**
+
 ```bash
-# Teste de tolerância a falhas
-python main.py --chaos --count 100 --chaos-delay 10
+# Teste 5.1: Monitoramento - RabbitMQ
+echo "=== TESTE 5.1: Monitoramento - RabbitMQ ==="
+python main.py --count 5 --size 100 --only rabbitmq
+
+# Teste 5.2: Monitoramento - Kafka
+echo "=== TESTE 5.2: Monitoramento - Kafka ==="
+python main.py --count 5 --size 100 --only kafka
 ```
 
-### 5. Monitoramento de Recursos
-O sistema automaticamente coleta métricas de CPU e memória durante os benchmarks.
+**✅ Critério de Sucesso**: Arquivos de monitoramento devem ser gerados em `logs/`.
 
-## 📊 Análise de Resultados
+#### **TESTE 6: Benchmarks Integrados**
 
-### Localização dos Logs
+```bash
+# Teste 6.1: Benchmark Completo (Todos os Brokers)
+echo "=== TESTE 6.1: Benchmark Completo ==="
+python main.py --count 10 --size 100
+
+# Teste 6.2: Benchmark com Rate Limiting
+echo "=== TESTE 6.2: Benchmark com Rate Limiting ==="
+python main.py --count 20 --size 100 --rps 5
+
+# Teste 6.3: Benchmark com Múltiplos Clientes
+echo "=== TESTE 6.3: Benchmark com Múltiplos Clientes ==="
+python main.py --count 30 --size 100 --producers 3 --consumers 2
+```
+
+**✅ Critério de Sucesso**: Todos os brokers devem ser testados em sequência.
+
+#### **TESTE 7: Baseline HTTP Detalhado**
+
+```bash
+# Teste 7.1: Iniciar servidor baseline
+echo "=== TESTE 7.1: Iniciando Servidor Baseline ==="
+python main.py --server --port 5000 &
+
+# Aguardar inicialização
+sleep 5
+
+# Teste 7.2: Testar cliente baseline
+echo "=== TESTE 7.2: Testando Cliente Baseline ==="
+python main.py --count 15 --size 100 --only baseline
+
+# Parar servidor
+pkill -f "python main.py --server"
+```
+
+**✅ Critério de Sucesso**: Servidor deve responder e processar requisições.
+
+#### **TESTE 8: Performance Comparativa Extensiva**
+
+```bash
+# Teste 8.1: Performance com diferentes tamanhos de mensagem
+echo "=== TESTE 8.1: Performance - Tamanhos Variados ==="
+python main.py --count 50 --size 64 --only baseline
+python main.py --count 50 --size 64 --only rabbitmq
+python main.py --count 50 --size 64 --only kafka
+
+python main.py --count 50 --size 1024 --only baseline
+python main.py --count 50 --size 1024 --only rabbitmq
+python main.py --count 50 --size 1024 --only kafka
+
+python main.py --count 50 --size 4096 --only baseline
+python main.py --count 50 --size 4096 --only rabbitmq
+python main.py --count 50 --size 4096 --only kafka
+
+# Teste 8.2: Performance com diferentes cargas
+echo "=== TESTE 8.2: Performance - Cargas Variadas ==="
+python main.py --count 100 --size 100 --only baseline
+python main.py --count 100 --size 100 --only rabbitmq
+python main.py --count 100 --size 100 --only kafka
+
+python main.py --count 500 --size 100 --only baseline
+python main.py --count 500 --size 100 --only rabbitmq
+python main.py --count 500 --size 100 --only kafka
+```
+
+**✅ Critério de Sucesso**: Dados suficientes para análise estatística.
+
+### Script de Execução Automática
+
+Para executar todos os testes automaticamente:
+
+```bash
+# Criar script de execução completa
+cat > executar_todos_testes.sh << 'EOF'
+#!/bin/bash
+
+echo "🎓 INICIANDO EXECUÇÃO COMPLETA DE TODOS OS TESTES"
+echo "=================================================="
+
+# Ativar ambiente virtual
+source venv/bin/activate
+
+# Verificar se containers estão rodando
+if ! docker compose ps | grep -q "Up"; then
+    echo "❌ Containers não estão rodando. Iniciando..."
+    docker compose up -d
+    sleep 60
+fi
+
+# Executar todos os testes
+echo "🧪 Executando Teste 1: Validação Básica"
+python main.py --count 10 --size 200 --only baseline
+python main.py --count 8 --size 150 --only rabbitmq
+python main.py --count 8 --size 150 --only kafka
+
+echo "🧪 Executando Teste 2: Rate Limiting"
+python main.py --count 8 --size 100 --rps 3 --only baseline
+python main.py --count 6 --size 100 --rps 2 --only rabbitmq
+python main.py --count 6 --size 100 --rps 2 --only kafka
+
+echo "🧪 Executando Teste 3: Múltiplos Clientes"
+python main.py --count 12 --size 100 --producers 3 --consumers 2 --only baseline
+python main.py --count 8 --size 100 --producers 2 --consumers 2 --only rabbitmq
+python main.py --count 8 --size 100 --producers 2 --consumers 2 --only kafka
+
+echo "🧪 Executando Teste 4: Chaos Engineering"
+python main.py --chaos --count 5 --size 100 --only rabbitmq
+sleep 30
+python main.py --chaos --count 5 --size 100 --only kafka
+sleep 30
+
+echo "🧪 Executando Teste 5: Monitoramento"
+python main.py --count 5 --size 100 --only rabbitmq
+python main.py --count 5 --size 100 --only kafka
+
+echo "🧪 Executando Teste 6: Benchmarks Integrados"
+python main.py --count 10 --size 100
+python main.py --count 20 --size 100 --rps 5
+python main.py --count 30 --size 100 --producers 3 --consumers 2
+
+echo "🧪 Executando Teste 7: Baseline HTTP"
+python main.py --server --port 5000 &
+sleep 5
+python main.py --count 15 --size 100 --only baseline
+pkill -f "python main.py --server"
+
+echo "🧪 Executando Teste 8: Performance Comparativa"
+python main.py --count 100 --size 100 --only baseline
+python main.py --count 100 --size 100 --only rabbitmq
+python main.py --count 100 --size 100 --only kafka
+
+echo "✅ TODOS OS TESTES CONCLUÍDOS COM SUCESSO!"
+echo "📊 Verifique os resultados em: logs/"
+EOF
+
+# Dar permissão de execução
+chmod +x executar_todos_testes.sh
+
+# Executar todos os testes
+./executar_todos_testes.sh
+```
+
+---
+
+## 📊 Análise e Visualização dos Resultados
+
+### Estrutura dos Logs Gerados
+
 ```
 logs/
 ├── baseline/
-│   ├── benchmark_results.csv
-│   └── [timestamp]_summary.csv
+│   ├── benchmark_results.csv          # Resultados consolidados
+│   ├── [timestamp]_send_times.json    # Timestamps de envio
+│   ├── [timestamp]_latency.csv        # Medições de latência
+│   └── [timestamp]_summary.csv        # Resumo estatístico
 ├── kafka/
-│   ├── benchmark_results.csv
-│   ├── [timestamp]_send_times.json
-│   ├── [timestamp]_latency.csv
-│   └── [timestamp]_summary.csv
+│   ├── benchmark_results.csv          # Resultados consolidados
+│   ├── [timestamp]_send_times.json    # Timestamps de envio
+│   ├── [timestamp]_latency.csv        # Medições de latência
+│   ├── [timestamp]_summary.csv        # Resumo estatístico
+│   └── resource_monitoring.csv        # Monitoramento de recursos
 └── rabbitmq/
-    ├── benchmark_results.csv
-    ├── [timestamp]_send_times.json
-    ├── [timestamp]_latency.csv
-    └── [timestamp]_summary.csv
+    ├── benchmark_results.csv          # Resultados consolidados
+    ├── [timestamp]_send_times.json    # Timestamps de envio
+    ├── [timestamp]_latency.csv        # Medições de latência
+    ├── [timestamp]_summary.csv        # Resumo estatístico
+    └── resource_monitoring.csv        # Monitoramento de recursos
 ```
 
-### Métricas Coletadas
-- **Latência**: Tempo end-to-end de envio até processamento
-- **Throughput**: Mensagens processadas por segundo
-- **Taxa de Sucesso**: Percentual de mensagens entregues com sucesso
-- **Recursos**: Uso de CPU e memória dos brokers
-- **Tolerância a Falhas**: Tempo de indisponibilidade e recuperação
+### Análise dos Resultados
 
-## 🔍 Interfaces de Monitoramento
-
-### RabbitMQ Management
-- **URL**: http://localhost:15672
-- **Credenciais**: `user` / `password`
-- **Funcionalidades**: Monitoramento de filas, conexões e cluster
-
-### Kafdrop (Kafka)
-- **URL**: http://localhost:9000
-- **Funcionalidades**: Visualização de tópicos, consumidores e mensagens
-
-### RabbitMQ Cluster
-- **Nó 1**: http://localhost:15672
-- **Nó 2**: http://localhost:15673
-- **Nó 3**: http://localhost:15674
-
-## ⚙️ Arquitetura do Projeto
-
-```
-.
-├── main.py                          # Ponto de entrada principal
-├── docker-compose.yml               # Infraestrutura Docker
-├── requirements.txt                 # Dependências Python
-├── src/                            # Código fonte modular
-│   ├── core/                       # Configurações e utilitários
-│   │   ├── config.py              # Configurações centralizadas
-│   │   ├── logger.py              # Sistema de logging
-│   │   └── metrics.py             # Coleta de métricas
-│   ├── brokers/                    # Implementações dos brokers
-│   │   ├── base.py                # Classe base abstrata
-│   │   ├── baseline/              # HTTP síncrono
-│   │   ├── kafka/                 # Apache Kafka
-│   │   └── rabbitmq/              # RabbitMQ
-│   ├── orchestration/              # Orquestração e testes
-│   │   ├── benchmark.py           # Execução de benchmarks
-│   │   ├── chaos.py               # Chaos engineering
-│   │   └── monitoring.py          # Monitoramento de recursos
-│   └── web/                       # Interface web (opcional)
-├── scripts/                        # Scripts de automação
-│   ├── setup_dev_environment.sh   # Configuração do ambiente
-│   ├── clear_logs.sh              # Limpeza de logs
-│   └── rabbitmq_cluster_init.sh   # Inicialização do cluster
-├── docs/                          # Documentação
-│   ├── README.md                  # Este arquivo
-│   └── spec.md                    # Especificação técnica
-├── tests/                         # Testes automatizados
-└── logs/                          # Logs e resultados
-```
-
-## 🛠️ Desenvolvimento
-
-### Formatação de Código
+#### 1. Visualização dos Resultados Consolidados
 ```bash
-# Formatar código com black
-black src/
+# Ver resultados consolidados de cada broker
+echo "=== RESULTADOS BASELINE ==="
+cat logs/baseline/benchmark_results.csv
 
-# Ordenar imports com isort
-isort src/
+echo "=== RESULTADOS RABBITMQ ==="
+cat logs/rabbitmq/benchmark_results.csv
 
-# Verificar qualidade com flake8
-flake8 src/
+echo "=== RESULTADOS KAFKA ==="
+cat logs/kafka/benchmark_results.csv
 ```
 
-### Executar Testes
+#### 2. Análise de Latência
 ```bash
-# Executar todos os testes
-pytest tests/
+# Analisar latências mais recentes
+echo "=== LATÊNCIAS BASELINE ==="
+ls -la logs/baseline/*latency.csv | tail -1 | xargs cat
 
-# Com cobertura
-pytest --cov=src tests/
+echo "=== LATÊNCIAS RABBITMQ ==="
+ls -la logs/rabbitmq/*latency.csv | tail -1 | xargs cat
+
+echo "=== LATÊNCIAS KAFKA ==="
+ls -la logs/kafka/*latency.csv | tail -1 | xargs cat
 ```
 
-### Limpeza de Logs
+#### 3. Análise de Throughput
 ```bash
-# Limpar todos os logs
-./scripts/clear_logs.sh
+# Extrair throughput dos summaries
+echo "=== THROUGHPUT BASELINE ==="
+ls -la logs/baseline/*summary.csv | tail -1 | xargs grep "throughput"
+
+echo "=== THROUGHPUT RABBITMQ ==="
+ls -la logs/rabbitmq/*summary.csv | tail -1 | xargs grep "throughput"
+
+echo "=== THROUGHPUT KAFKA ==="
+ls -la logs/kafka/*summary.csv | tail -1 | xargs grep "throughput"
 ```
 
-## 🛑 Parando o Ambiente
-
+#### 4. Monitoramento de Recursos
 ```bash
-# Parar containers
-docker compose down
+# Verificar monitoramento de recursos
+echo "=== RECURSOS RABBITMQ ==="
+ls -la logs/rabbitmq/*resource_monitoring.csv | tail -1 | xargs head -10
 
-# Desativar ambiente virtual
-deactivate
-
-# Remover volumes (cuidado: apaga dados)
-docker compose down -v
+echo "=== RECURSOS KAFKA ==="
+ls -la logs/kafka/*resource_monitoring.csv | tail -1 | xargs head -10
 ```
 
-## 🔧 Configurações Avançadas
+### Visualização Gráfica (Opcional)
 
-### RabbitMQ
-- **Quorum Queues**: Habilitadas para alta disponibilidade
-- **Cluster**: 3 nós com replicação automática
-- **Confirmação de Entrega**: Habilitada para garantia de entrega
+#### Instalação de Ferramentas de Visualização
+```bash
+# Instalar ferramentas para análise de dados
+pip install pandas matplotlib seaborn numpy
 
-### Apache Kafka
-- **KRaft Mode**: Sem dependência do Zookeeper
-- **Queue Mode**: Simulação de comportamento de fila
-- **Compressão**: GZIP para otimização de rede
+# Criar script de visualização
+cat > visualizar_resultados.py << 'EOF'
+#!/usr/bin/env python3
+import pandas as pd
+import matplotlib.pyplot as plt
+import seaborn as sns
+import glob
+import os
 
-### Baseline HTTP
-- **Flask**: Servidor web leve
-- **Processamento**: Simulação de 1ms por requisição
-- **Métricas**: Coleta de estatísticas em tempo real
+def plot_benchmark_results():
+    """Criar gráficos dos resultados de benchmark"""
+    
+    # Carregar dados
+    baseline_data = pd.read_csv('logs/baseline/benchmark_results.csv')
+    rabbitmq_data = pd.read_csv('logs/rabbitmq/benchmark_results.csv')
+    kafka_data = pd.read_csv('logs/kafka/benchmark_results.csv')
+    
+    # Combinar dados
+    all_data = pd.concat([
+        baseline_data.assign(broker='Baseline'),
+        rabbitmq_data.assign(broker='RabbitMQ'),
+        kafka_data.assign(broker='Kafka')
+    ])
+    
+    # Criar gráficos
+    fig, axes = plt.subplots(2, 2, figsize=(15, 10))
+    
+    # Throughput por broker
+    sns.barplot(data=all_data, x='broker', y='throughput', ax=axes[0,0])
+    axes[0,0].set_title('Throughput por Broker')
+    axes[0,0].set_ylabel('Mensagens/segundo')
+    
+    # Latência por broker
+    sns.barplot(data=all_data, x='broker', y='avg_latency', ax=axes[0,1])
+    axes[0,1].set_title('Latência Média por Broker')
+    axes[0,1].set_ylabel('Latência (segundos)')
+    
+    # Taxa de sucesso
+    sns.barplot(data=all_data, x='broker', y='success_rate', ax=axes[1,0])
+    axes[1,0].set_title('Taxa de Sucesso por Broker')
+    axes[1,0].set_ylabel('Taxa de Sucesso (%)')
+    
+    # Duração total
+    sns.barplot(data=all_data, x='broker', y='duration', ax=axes[1,1])
+    axes[1,1].set_title('Duração Total por Broker')
+    axes[1,1].set_ylabel('Duração (segundos)')
+    
+    plt.tight_layout()
+    plt.savefig('benchmark_results.png', dpi=300, bbox_inches='tight')
+    print("📊 Gráfico salvo como: benchmark_results.png")
 
-## ⁉️ Solução de Problemas
+if __name__ == "__main__":
+    plot_benchmark_results()
+EOF
 
-### Problemas Comuns
+# Executar visualização
+python visualizar_resultados.py
+```
 
-#### 1. Erro de Permissão Docker
+---
+
+## 📈 Interpretação dos Resultados
+
+### Métricas Principais
+
+#### 1. **Throughput (Mensagens/segundo)**
+- **Baseline HTTP**: Esperado 50-200 msgs/s
+- **RabbitMQ**: Esperado 1,000-5,000 msgs/s
+- **Apache Kafka**: Esperado 5,000-20,000 msgs/s
+
+#### 2. **Latência (Segundos)**
+- **Baseline HTTP**: Esperado 0.001-0.010s
+- **RabbitMQ**: Esperado 0.001-0.005s
+- **Apache Kafka**: Esperado 0.001-0.003s
+
+#### 3. **Taxa de Sucesso (%)**
+- **Todos os brokers**: Esperado 95-100%
+
+#### 4. **Uso de Recursos**
+- **CPU**: Varia conforme carga
+- **Memória**: RabbitMQ ~200MB, Kafka ~300MB
+
+### Análise Comparativa
+
+#### Cenário 1: Mensagens Pequenas (100 bytes)
+```bash
+# Executar teste específico
+python main.py --count 100 --size 100 --only baseline
+python main.py --count 100 --size 100 --only rabbitmq
+python main.py --count 100 --size 100 --only kafka
+
+# Analisar resultados
+echo "=== COMPARAÇÃO - MENSAGENS PEQUENAS ==="
+echo "Baseline: $(tail -1 logs/baseline/benchmark_results.csv | cut -d',' -f3) msgs/s"
+echo "RabbitMQ: $(tail -1 logs/rabbitmq/benchmark_results.csv | cut -d',' -f3) msgs/s"
+echo "Kafka:    $(tail -1 logs/kafka/benchmark_results.csv | cut -d',' -f3) msgs/s"
+```
+
+#### Cenário 2: Mensagens Grandes (4KB)
+```bash
+# Executar teste específico
+python main.py --count 50 --size 4096 --only baseline
+python main.py --count 50 --size 4096 --only rabbitmq
+python main.py --count 50 --size 4096 --only kafka
+
+# Analisar resultados
+echo "=== COMPARAÇÃO - MENSAGENS GRANDES ==="
+echo "Baseline: $(tail -1 logs/baseline/benchmark_results.csv | cut -d',' -f3) msgs/s"
+echo "RabbitMQ: $(tail -1 logs/rabbitmq/benchmark_results.csv | cut -d',' -f3) msgs/s"
+echo "Kafka:    $(tail -1 logs/kafka/benchmark_results.csv | cut -d',' -f3) msgs/s"
+```
+
+#### Cenário 3: Rate Limiting
+```bash
+# Executar teste com rate limiting
+python main.py --count 20 --size 100 --rps 5 --only baseline
+python main.py --count 20 --size 100 --rps 5 --only rabbitmq
+python main.py --count 20 --size 100 --rps 5 --only kafka
+
+# Verificar se rate limiting funcionou
+echo "=== VERIFICAÇÃO RATE LIMITING ==="
+echo "Baseline: $(tail -1 logs/baseline/benchmark_results.csv | cut -d',' -f3) msgs/s (esperado ~5)"
+echo "RabbitMQ: $(tail -1 logs/rabbitmq/benchmark_results.csv | cut -d',' -f3) msgs/s (esperado ~5)"
+echo "Kafka:    $(tail -1 logs/kafka/benchmark_results.csv | cut -d',' -f3) msgs/s (esperado ~5)"
+```
+
+### Relatório de Análise
+
+#### Gerar Relatório Automático
+```bash
+# Criar script de relatório
+cat > gerar_relatorio.py << 'EOF'
+#!/usr/bin/env python3
+import pandas as pd
+import glob
+import os
+from datetime import datetime
+
+def gerar_relatorio():
+    """Gerar relatório completo dos resultados"""
+    
+    print("📊 RELATÓRIO DE ANÁLISE DE PERFORMANCE")
+    print("=" * 50)
+    print(f"Data: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
+    print()
+    
+    # Analisar cada broker
+    brokers = ['baseline', 'rabbitmq', 'kafka']
+    
+    for broker in brokers:
+        print(f"🔍 ANÁLISE DO {broker.upper()}")
+        print("-" * 30)
+        
+        # Carregar dados
+        try:
+            data = pd.read_csv(f'logs/{broker}/benchmark_results.csv')
+            
+            # Estatísticas básicas
+            print(f"Total de testes: {len(data)}")
+            print(f"Throughput médio: {data['throughput'].mean():.2f} msgs/s")
+            print(f"Latência média: {data['avg_latency'].mean():.6f}s")
+            print(f"Taxa de sucesso média: {data['success_rate'].mean():.2f}%")
+            print(f"Throughput máximo: {data['throughput'].max():.2f} msgs/s")
+            print(f"Throughput mínimo: {data['throughput'].min():.2f} msgs/s")
+            
+        except FileNotFoundError:
+            print(f"❌ Dados não encontrados para {broker}")
+        
+        print()
+    
+    # Comparação entre brokers
+    print("📈 COMPARAÇÃO ENTRE BROKERS")
+    print("-" * 30)
+    
+    try:
+        baseline_data = pd.read_csv('logs/baseline/benchmark_results.csv')
+        rabbitmq_data = pd.read_csv('logs/rabbitmq/benchmark_results.csv')
+        kafka_data = pd.read_csv('logs/kafka/benchmark_results.csv')
+        
+        print(f"Baseline - Throughput médio: {baseline_data['throughput'].mean():.2f} msgs/s")
+        print(f"RabbitMQ - Throughput médio: {rabbitmq_data['throughput'].mean():.2f} msgs/s")
+        print(f"Kafka    - Throughput médio: {kafka_data['throughput'].mean():.2f} msgs/s")
+        
+        print()
+        print("🏆 RANKING DE PERFORMANCE:")
+        throughputs = {
+            'Baseline': baseline_data['throughput'].mean(),
+            'RabbitMQ': rabbitmq_data['throughput'].mean(),
+            'Kafka': kafka_data['throughput'].mean()
+        }
+        
+        ranking = sorted(throughputs.items(), key=lambda x: x[1], reverse=True)
+        for i, (broker, throughput) in enumerate(ranking, 1):
+            print(f"{i}º lugar: {broker} - {throughput:.2f} msgs/s")
+            
+    except FileNotFoundError as e:
+        print(f"❌ Erro ao carregar dados: {e}")
+    
+    print()
+    print("✅ Relatório gerado com sucesso!")
+
+if __name__ == "__main__":
+    gerar_relatorio()
+EOF
+
+# Executar relatório
+python gerar_relatorio.py
+```
+
+---
+
+## 🔧 Solução de Problemas
+
+### Problemas Comuns e Soluções
+
+#### 1. **Erro: "Permission denied" no Docker**
 ```bash
 # Verificar se usuário está no grupo docker
 groups | grep docker
 
-# Se não estiver, reinicie o terminal após setup
+# Se não estiver, adicionar usuário ao grupo
+sudo usermod -aG docker $USER
+
+# REINICIAR O TERMINAL e tentar novamente
 ```
 
-#### 2. Porta em Uso
+#### 2. **Erro: "Connection refused" nos brokers**
+```bash
+# Verificar se containers estão rodando
+docker compose ps
+
+# Se não estiverem, reiniciar
+docker compose down
+docker compose up -d
+
+# Aguardar inicialização
+sleep 60
+
+# Verificar logs
+docker compose logs
+```
+
+#### 3. **Erro: "No module named 'pika'" ou similar**
+```bash
+# Verificar se ambiente virtual está ativo
+which python
+
+# Se não estiver, ativar
+source venv/bin/activate
+
+# Reinstalar dependências
+pip install -r requirements.txt
+```
+
+#### 4. **Erro: "Port already in use"**
 ```bash
 # Verificar portas em uso
-sudo netstat -tlnp | grep :5672
-sudo netstat -tlnp | grep :9092
+sudo netstat -tlnp | grep -E ":(5672|9092|15672|9000)"
 
 # Parar serviços conflitantes
 sudo systemctl stop rabbitmq-server
+sudo systemctl stop kafka
+
+# Ou usar portas diferentes no docker-compose.yml
 ```
 
-#### 3. Containers Não Iniciam
+#### 5. **Erro: "Container failed to start"**
 ```bash
-# Verificar logs
-docker compose logs
+# Verificar logs do container
+docker compose logs [nome-do-container]
 
-# Recriar containers
-docker compose down
-docker compose up -d --force-recreate
+# Verificar recursos do sistema
+free -h
+df -h
+
+# Limpar containers antigos
+docker system prune -a
 ```
 
-#### 4. Problemas de Cluster RabbitMQ
+#### 6. **Erro: "RabbitMQ cluster not working"**
 ```bash
 # Verificar status do cluster
 docker exec rabbitmq-1 rabbitmqctl cluster_status
 
 # Reinicializar cluster
 docker compose restart rabbitmq-1 rabbitmq-2 rabbitmq-3
+
+# Aguardar e verificar novamente
+sleep 30
+docker exec rabbitmq-1 rabbitmqctl cluster_status
+```
+
+#### 7. **Erro: "Kafka topics not created"**
+```bash
+# Verificar se Kafka está funcionando
+docker exec kafka kafka-topics.sh --list --bootstrap-server localhost:9092
+
+# Criar tópico manualmente se necessário
+docker exec kafka kafka-topics.sh --create --topic bcc-tcc --bootstrap-server localhost:9092 --partitions 3 --replication-factor 1
+```
+
+#### 8. **Erro: "Baseline server not responding"**
+```bash
+# Verificar se servidor está rodando
+ps aux | grep "python main.py --server"
+
+# Se não estiver, iniciar manualmente
+python main.py --server --port 5000 &
+
+# Testar conectividade
+curl -X POST http://localhost:5000/notify -H "Content-Type: application/json" -d '{"message": "test"}'
 ```
 
 ### Logs de Debug
+
+#### Verificar Logs da Aplicação
 ```bash
-# Logs detalhados da aplicação
+# Logs gerais
 tail -f logs/application.log
 
-# Logs específicos de um broker
-tail -f logs/kafka/benchmark_results.csv
+# Logs específicos de cada broker
+tail -f logs/baseline/benchmark_results.csv
 tail -f logs/rabbitmq/benchmark_results.csv
+tail -f logs/kafka/benchmark_results.csv
 ```
 
-## 📈 Performance Esperada
+#### Verificar Logs do Docker
+```bash
+# Logs de todos os containers
+docker compose logs -f
 
-### Cenários Típicos
-- **Baseline HTTP**: ~100-500 msgs/s (dependendo do hardware)
-- **RabbitMQ**: ~1,000-10,000 msgs/s
-- **Apache Kafka**: ~10,000-100,000 msgs/s
+# Logs de um container específico
+docker compose logs -f rabbitmq-1
+docker compose logs -f kafka
+```
 
-### Fatores que Afetam Performance
-- **Tamanho das Mensagens**: Mensagens maiores = menor throughput
-- **Rate Limiting**: Limita artificialmente o throughput
-- **Recursos do Sistema**: CPU, RAM e I/O
-- **Rede**: Latência e largura de banda
+### Reset Completo do Ambiente
 
-## 🤝 Contribuição
+Se nada funcionar, execute um reset completo:
 
-1. Fork o projeto
-2. Crie uma branch para sua feature (`git checkout -b feature/nova-funcionalidade`)
-3. Commit suas mudanças (`git commit -am 'Adiciona nova funcionalidade'`)
-4. Push para a branch (`git push origin feature/nova-funcionalidade`)
-5. Abra um Pull Request
+```bash
+# Parar tudo
+docker compose down -v
+deactivate
 
-## 📄 Licença
+# Remover ambiente virtual
+rm -rf venv
 
-Este projeto está sob a licença MIT. Veja o arquivo `LICENSE` para mais detalhes.
+# Limpar Docker
+docker system prune -a
 
-## 📞 Suporte
+# Reconfigurar tudo
+./scripts/setup_dev_environment.sh
+source venv/bin/activate
+docker compose up -d
+```
 
-Para dúvidas ou problemas:
-1. Verifique a seção de solução de problemas
-2. Consulte os logs em `logs/`
-3. Abra uma issue no repositório
-4. Consulte a documentação técnica em `docs/spec.md`
+---
+
+## 📚 Documentação Técnica
+
+### Arquitetura do Sistema
+
+#### Componentes Principais
+1. **Orquestrador**: `main.py` - Ponto de entrada único
+2. **Brokers**: Implementações modulares em `src/brokers/`
+3. **Core**: Configurações e utilitários em `src/core/`
+4. **Orquestração**: Lógica de testes em `src/orchestration/`
+
+#### Fluxo de Execução
+```
+main.py → BenchmarkOrchestrator → Broker Classes → Metrics Collection → Logs
+```
+
+### Configurações Técnicas
+
+#### RabbitMQ
+- **Versão**: 4.1.1
+- **Cluster**: 3 nós com Quorum Queues
+- **Portas**: 5672 (AMQP), 15672 (Management)
+- **Configurações**: Confirmação de entrega, mensagens persistentes
+
+#### Apache Kafka
+- **Versão**: 4.0
+- **Modo**: KRaft (sem Zookeeper)
+- **Queue Mode**: Simulação de KIP-932
+- **Portas**: 9092 (Broker), 9000 (Kafdrop)
+
+#### Baseline HTTP
+- **Framework**: Flask
+- **Porta**: 5000 (configurável)
+- **Processamento**: 1ms simulado por requisição
+
+### Métricas Coletadas
+
+#### Latência
+- **T1**: Timestamp após confirmação do broker
+- **T2**: Timestamp após processamento
+- **Latência**: T2 - T1
+
+#### Throughput
+- **Cálculo**: Mensagens processadas / Tempo total
+- **Unidade**: Mensagens por segundo
+
+#### Recursos
+- **CPU**: Percentual de uso
+- **Memória**: Uso em MB
+- **Coleta**: A cada 5 segundos durante testes
+
+### Validação Científica
+
+#### Reprodutibilidade
+- **Ambiente**: Docker containerizado
+- **Versões**: Fixas e documentadas
+- **Configurações**: Padronizadas e versionadas
+
+#### Métricas
+- **Precisão**: Timestamps com precisão de microssegundos
+- **Consistência**: Mesmo ambiente para todos os testes
+- **Comparabilidade**: Mesmas condições para todos os brokers
+
+---
+
+## 🎯 Conclusão
+
+Este sistema de benchmark foi desenvolvido seguindo rigorosos padrões acadêmicos para garantir:
+
+1. **Reprodutibilidade**: Qualquer pesquisador pode replicar os resultados
+2. **Precisão**: Métricas coletadas com alta precisão
+3. **Completude**: Todos os aspectos relevantes são testados
+4. **Documentação**: Processo completamente documentado
+
+### Próximos Passos para Análise
+
+1. **Executar todos os testes** seguindo este guia
+2. **Coletar dados** dos arquivos de log
+3. **Analisar resultados** usando as ferramentas fornecidas
+4. **Gerar gráficos** para visualização
+5. **Interpretar dados** no contexto do TCC
+
+### Contato e Suporte
+
+Para dúvidas sobre a implementação ou análise dos resultados:
+- Consulte a documentação técnica em `docs/spec.md`
+- Verifique os logs em `logs/`
+- Execute os scripts de diagnóstico fornecidos
+
+**Boa sorte com seu TCC! 🎓**
