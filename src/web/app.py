@@ -1,22 +1,30 @@
-from flask import Flask, render_template, send_from_directory, request, jsonify
-import os
 import csv
-from subprocess import Popen
+import os
 import time
+from subprocess import Popen
+
+from flask import Flask, jsonify, render_template, request, send_from_directory
 
 app = Flask(__name__, template_folder="templates", static_folder="static")
 
-BASE_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
+BASE_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
 LOG_DIR_RABBIT = os.path.join(BASE_DIR, "logs", "rabbitmq")
 LOG_DIR_KAFKA = os.path.join(BASE_DIR, "logs", "kafka")
 
 # Armazena processos de benchmark em andamento
 benchmarks = {}
 
+
 def read_benchmark_file(filepath):
     metrics = {
-        "timestamps": [], "latency_avg": [], "latency_50": [], "latency_95": [],
-        "latency_99": [], "throughput": [], "cpu": [], "memory": []
+        "timestamps": [],
+        "latency_avg": [],
+        "latency_50": [],
+        "latency_95": [],
+        "latency_99": [],
+        "throughput": [],
+        "cpu": [],
+        "memory": [],
     }
     try:
         if not os.path.exists(filepath):
@@ -36,9 +44,11 @@ def read_benchmark_file(filepath):
         print(f"Erro ao ler {filepath}: {e}")
     return metrics
 
+
 @app.route("/")
 def index():
     return render_template("index.html")
+
 
 @app.route("/benchmark-rabbitmq")
 def benchmark_rabbitmq():
@@ -46,8 +56,13 @@ def benchmark_rabbitmq():
     count = request.args.get("count", default="1000")
     size = request.args.get("size", default="200")
     benchmark_id = f"rabbitmq_{int(time.time())}"
-    benchmarks[benchmark_id] = Popen(["python", script_path, "--only", "rabbitmq", "--count", count, "--size", size])
-    return jsonify({"message": "🏁 Benchmark exclusivo do RabbitMQ iniciado.", "id": benchmark_id})
+    benchmarks[benchmark_id] = Popen(
+        ["python", script_path, "--only", "rabbitmq", "--count", count, "--size", size]
+    )
+    return jsonify(
+        {"message": "🏁 Benchmark exclusivo do RabbitMQ iniciado.", "id": benchmark_id}
+    )
+
 
 @app.route("/benchmark-kafka")
 def benchmark_kafka():
@@ -55,8 +70,16 @@ def benchmark_kafka():
     count = request.args.get("count", default="1000")
     size = request.args.get("size", default="200")
     benchmark_id = f"kafka_{int(time.time())}"
-    benchmarks[benchmark_id] = Popen(["python", script_path, "--only", "kafka", "--count", count, "--size", size])
-    return jsonify({"message": "🏁 Benchmark exclusivo do Apache Kafka iniciado.", "id": benchmark_id})
+    benchmarks[benchmark_id] = Popen(
+        ["python", script_path, "--only", "kafka", "--count", count, "--size", size]
+    )
+    return jsonify(
+        {
+            "message": "🏁 Benchmark exclusivo do Apache Kafka iniciado.",
+            "id": benchmark_id,
+        }
+    )
+
 
 @app.route("/run-benchmark")
 def run_benchmark():
@@ -64,8 +87,13 @@ def run_benchmark():
     count = request.args.get("count", default="1000")
     size = request.args.get("size", default="200")
     benchmark_id = f"both_{int(time.time())}"
-    benchmarks[benchmark_id] = Popen(["python", script_path, "--count", count, "--size", size])
-    return jsonify({"message": "🏁 Benchmark comparativo iniciado.", "id": benchmark_id})
+    benchmarks[benchmark_id] = Popen(
+        ["python", script_path, "--count", count, "--size", size]
+    )
+    return jsonify(
+        {"message": "🏁 Benchmark comparativo iniciado.", "id": benchmark_id}
+    )
+
 
 @app.route("/benchmark-status/<benchmark_id>")
 def benchmark_status(benchmark_id):
@@ -78,9 +106,11 @@ def benchmark_status(benchmark_id):
         del benchmarks[benchmark_id]
         return jsonify({"status": "completed", "message": "Benchmark concluído."})
 
-@app.route('/media/<path:filename>')
+
+@app.route("/media/<path:filename>")
 def media(filename):
-    return send_from_directory('media', filename)
+    return send_from_directory("media", filename)
+
 
 @app.route("/dashboard")
 def dashboard():
@@ -89,6 +119,7 @@ def dashboard():
     rabbit_metrics = read_benchmark_file(rabbit_file)
     kafka_metrics = read_benchmark_file(kafka_file)
     return render_template("dashboard.html", rabbit=rabbit_metrics, kafka=kafka_metrics)
+
 
 if __name__ == "__main__":
     app.run(debug=True, host="0.0.0.0", port=5000)

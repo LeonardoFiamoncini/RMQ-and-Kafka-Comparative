@@ -1,7 +1,10 @@
 """
-Configurações centralizadas do projeto
+Configurações centralizadas do projeto.
+
+Este módulo contém todas as configurações do sistema, incluindo
+configurações de brokers, logging, benchmark e chaos engineering.
 """
-import os
+
 from pathlib import Path
 
 # Diretórios do projeto
@@ -17,7 +20,7 @@ BROKER_CONFIGS = {
         "topic": "bcc-tcc",
         "group_id": "tcc-queue-mode-group",
         "container_name": "kafka",
-        "port": 9092
+        "port": 9092,
     },
     "rabbitmq": {
         "host": "localhost",
@@ -26,13 +29,9 @@ BROKER_CONFIGS = {
         "password": "password",
         "queue": "bcc-tcc",
         "container_names": ["rabbitmq-1", "rabbitmq-2", "rabbitmq-3"],
-        "management_port": 15672
+        "management_port": 15672,
     },
-    "baseline": {
-        "host": "localhost",
-        "port": 5000,
-        "endpoint": "/notify"
-    }
+    "baseline": {"host": "localhost", "port": 5000, "endpoint": "/notify"},
 }
 
 # Configurações de logging
@@ -40,35 +39,32 @@ LOGGING_CONFIG = {
     "version": 1,
     "disable_existing_loggers": False,
     "formatters": {
-        "standard": {
-            "format": "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
-        },
+        "standard": {"format": "%(asctime)s - %(name)s - %(levelname)s - %(message)s"},
         "detailed": {
-            "format": "%(asctime)s - %(name)s - %(levelname)s - %(funcName)s:%(lineno)d - %(message)s"
-        }
+            "format": (
+                "%(asctime)s - %(name)s - %(levelname)s - "
+                "%(funcName)s:%(lineno)d - %(message)s"
+            )
+        },
     },
     "handlers": {
         "console": {
             "class": "logging.StreamHandler",
             "level": "INFO",
             "formatter": "standard",
-            "stream": "ext://sys.stdout"
+            "stream": "ext://sys.stdout",
         },
         "file": {
             "class": "logging.FileHandler",
             "level": "DEBUG",
             "formatter": "detailed",
             "filename": str(LOGS_DIR / "application.log"),
-            "mode": "a"
-        }
+            "mode": "a",
+        },
     },
     "loggers": {
-        "": {
-            "handlers": ["console", "file"],
-            "level": "DEBUG",
-            "propagate": False
-        }
-    }
+        "": {"handlers": ["console", "file"], "level": "DEBUG", "propagate": False}
+    },
 }
 
 # Configurações de benchmark
@@ -79,19 +75,19 @@ BENCHMARK_CONFIG = {
     "default_consumers": 1,
     "default_rps": None,
     "timeout": 300,  # 5 minutos
-    "monitoring_interval": 1.0  # 1 segundo
+    "monitoring_interval": 1.0,  # 1 segundo
 }
 
 # Configurações de chaos engineering
 CHAOS_CONFIG = {
     "default_delay": 10,  # segundos
     "max_recovery_wait": 60,  # segundos
-    "monitoring_interval": 2.0  # segundos
+    "monitoring_interval": 2.0,  # segundos
 }
 
 # Configurações de monitoramento
 MONITORING_CONFIG = {
     "docker_stats_format": "{{.CPUPerc}},{{.MemUsage}}",
     "monitoring_interval": 1.0,
-    "timeout": 5
+    "timeout": 5,
 }

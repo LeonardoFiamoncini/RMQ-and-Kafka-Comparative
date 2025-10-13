@@ -1,42 +1,49 @@
 """
 Implementação do consumidor Kafka
 """
-from kafka import KafkaConsumer
+
+import glob
 import json
-import time
+import os
 import signal
 import sys
-import glob
-import os
+import time
 from typing import Optional
-from ..base import BaseBroker
+
+from kafka import KafkaConsumer
+
 from ...core.config import BROKER_CONFIGS
-from ...core.logger import Logger
+from ..base import BaseBroker
+
 
 class KafkaConsumerBroker(BaseBroker):
     """Implementação do consumidor Kafka"""
-    
+
     def __init__(self):
         super().__init__("kafka")
         self.config = BROKER_CONFIGS["kafka"]
         self.send_times = {}
         self._load_send_times()
-        
+
     def _load_send_times(self):
         """Carrega os tempos de envio do arquivo mais recente"""
         try:
             # Tentar carregar arquivo específico primeiro
-            send_times_file = self.metrics.metrics_dir / f"{self.metrics.timestamp}_send_times.json"
+            send_times_file = (
+                self.metrics.metrics_dir / f"{self.metrics.timestamp}_send_times.json"
+            )
             if send_times_file.exists():
-                with open(send_times_file, 'r') as f:
+                with open(send_times_file, "r") as f:
                     self.send_times = json.load(f)
                 return
-                
+
             # Se não existir, buscar o arquivo mais recente
-            send_times_files = glob.glob(str(self.metrics.metrics_dir / '*_send_times.json'))
+            send_times_files = glob.glob(
+                str(self.metrics.metrics_dir / "*_send_times.json")
+            )
             if send_times_files:
                 latest_file = max(send_times_files, key=os.path.getctime)
-                with open(latest_file, 'r') as f:
+                with open(latest_file, "r") as f:
                     self.send_times = json.load(f)
                 self.logger.info(f"Usando arquivo de tempos: {latest_file}")
             else:
@@ -53,17 +60,17 @@ class KafkaConsumerBroker(BaseBroker):
         try:
             # Inicializar métricas
             self.metrics.start_timing()
-            
+
             # Configuração para Queue Mode (Share Groups) - KIP-932
             # Nota: A biblioteca kafka-python ainda não suporta nativamente Share Groups
             # Implementando uma simulação usando consumer groups tradicionais com configurações otimizadas
             consumer = KafkaConsumer(
                 self.config["topic"],
                 bootstrap_servers=self.config["bootstrap_servers"],
-                auto_offset_reset='earliest',
+                auto_offset_reset="earliest",
                 enable_auto_commit=False,  # Desabilitar auto-commit para controle manual
                 group_id=self.config["group_id"],  # Nome específico para Queue Mode
-                value_deserializer=lambda v: json.loads(v.decode('utf-8')),
+                value_deserializer=lambda v: json.loads(v.decode("utf-8")),
                 # Configurações otimizadas para simular comportamento de Queue Mode
                 session_timeout_ms=30000,
                 heartbeat_interval_ms=10000,
@@ -72,7 +79,9 @@ class KafkaConsumerBroker(BaseBroker):
                 fetch_max_wait_ms=500,
             )
 
-            self.logger.info(f'Aguardando até {expected_count} mensagens em Queue Mode (Share Groups)')
+            self.logger.info(
+                f"Aguardando até {expected_count} mensagens em Queue Mode (Share Groups)"
+            )
             timeout = time.time() + 60  # Timeout de 60 segundos
 
             try:
@@ -85,19 +94,28 @@ class KafkaConsumerBroker(BaseBroker):
                     if msg_id in self.send_times:
                         latency = recv_time - float(self.send_times[msg_id])
                         self.metrics.record_latency(msg_id, latency)
-                        self.logger.info(f"Mensagem {msg_id} recebida com latência de {latency:.6f} segundos")
+                        self.logger.info(
+                            f"Mensagem {msg_id} recebida com latência de {latency:.6f} segundos"
+                        )
                     else:
-                        self.logger.warning(f"Mensagem {msg_id} recebida sem timestamp de envio")
+                        self.logger.warning(
+                            f"Mensagem {msg_id} recebida sem timestamp de envio"
+                        )
 
                     # Reconhecimento individual da mensagem (específico para Share Groups)
                     try:
                         # Para consumer groups tradicionais, usar commit assíncrono
                         consumer.commit()
-                        self.logger.debug(f"Mensagem {msg_id} reconhecida (acknowledged)")
+                        self.logger.debug(
+                            f"Mensagem {msg_id} reconhecida (acknowledged)"
+                        )
                     except Exception as e:
                         self.logger.error(f"Erro ao reconhecer mensagem {msg_id}: {e}")
 
-                    if len(self.metrics.latencies) >= expected_count or time.time() > timeout:
+                    if (
+                        len(self.metrics.latencies) >= expected_count
+                        or time.time() > timeout
+                    ):
                         break
 
             except Exception as e:
@@ -106,16 +124,18 @@ class KafkaConsumerBroker(BaseBroker):
             finally:
                 consumer.close()
                 self.metrics.end_timing()
-                
+
             # Salvar métricas
             self.save_metrics()
             return True
-            
+
         except Exception as e:
             self.logger.error(f"Erro no consumo de mensagens: {e}")
             return False
 
-    def send_messages(self, count: int, message_size: int, rps: Optional[int] = None) -> bool:
+    def send_messages(
+        self, count: int, message_size: int, rps: Optional[int] = None
+    ) -> bool:
         """Não implementado para consumidor"""
         raise NotImplementedError("Envio não implementado no consumidor")
 
@@ -123,25 +143,31 @@ class KafkaConsumerBroker(BaseBroker):
         """Identifica o nó líder do cluster Kafka"""
         return self.config["container_name"]  # Para cluster de 1 nó
 
+
 def main():
     """Função principal para execução standalone"""
     import argparse
-    
-    parser = argparse.ArgumentParser(description='Kafka Consumer')
-    parser.add_argument('expected_count', type=int, nargs='?', default=1000, 
-                       help='Número esperado de mensagens')
-    
+
+    parser = argparse.ArgumentParser(description="Kafka Consumer")
+    parser.add_argument(
+        "expected_count",
+        type=int,
+        nargs="?",
+        default=1000,
+        help="Número esperado de mensagens",
+    )
+
     args = parser.parse_args()
-    
+
     consumer = KafkaConsumerBroker()
-    
+
     def signal_handler(sig, frame):
-        print('\n[!] Interrompido pelo usuário. Salvando resultados...')
+        print("\n[!] Interrompido pelo usuário. Salvando resultados...")
         consumer.save_metrics()
         sys.exit(0)
-    
+
     signal.signal(signal.SIGINT, signal_handler)
-    
+
     try:
         success = consumer.consume_messages(args.expected_count)
         if success:
@@ -153,6 +179,7 @@ def main():
         print("\n[!] Interrompido pelo usuário")
         consumer.save_metrics()
         sys.exit(0)
+
 
 if __name__ == "__main__":
     main()
