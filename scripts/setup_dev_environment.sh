@@ -90,6 +90,12 @@ requirements=(
     pika
     kafka-python
     psutil
+    requests
+    black
+    isort
+    flake8
+    pytest
+    pytest-cov
 )
 
 echo "➡️ Instalando: ${requirements[*]}"
