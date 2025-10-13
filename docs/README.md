@@ -120,7 +120,7 @@ groups | grep docker
 source venv/bin/activate
 
 # Verificar instalação das dependências
-pip list | grep -E "(flask|pika|kafka-python|requests|black|isort|flake8)"
+pip list | grep -E -i "(flask|pika|kafka-python|requests|black|isort|flake8)"
 ```
 
 ### Passo 4: Inicialização da Infraestrutura
