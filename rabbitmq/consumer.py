@@ -49,17 +49,30 @@ def callback(ch, method, properties, body):
         msg_id = msg.get("id")
     except Exception as e:
         logging.error(f"Falha ao decodificar mensagem: {e}")
+        # Rejeitar mensagem malformada (nack)
+        ch.basic_nack(delivery_tag=method.delivery_tag, requeue=False)
         return
 
-    if msg_id in send_times:
-        latency = recv_time - float(send_times[msg_id])
-        latencies.append((msg_id, latency))
-        logging.info(f"Mensagem {msg_id} recebida com latência de {latency:.6f} segundos")
-    else:
-        logging.warning(f"Mensagem {msg_id} recebida sem timestamp correspondente")
+    try:
+        # Processar mensagem
+        if msg_id in send_times:
+            latency = recv_time - float(send_times[msg_id])
+            latencies.append((msg_id, latency))
+            logging.info(f"Mensagem {msg_id} recebida com latência de {latency:.6f} segundos")
+        else:
+            logging.warning(f"Mensagem {msg_id} recebida sem timestamp correspondente")
 
-    total_received += 1
-    end_consume = recv_time
+        total_received += 1
+        end_consume = recv_time
+        
+        # Confirmar processamento bem-sucedido (ack)
+        ch.basic_ack(delivery_tag=method.delivery_tag)
+        logging.debug(f"Mensagem {msg_id} confirmada (ack)")
+        
+    except Exception as e:
+        logging.error(f"Erro ao processar mensagem {msg_id}: {e}")
+        # Rejeitar mensagem com erro (nack) - pode ser reprocessada
+        ch.basic_nack(delivery_tag=method.delivery_tag, requeue=True)
 
 
 def save_results():
@@ -96,7 +109,7 @@ def start_consumer(expected_count=1000):
     channel = connection.channel()
     channel.queue_declare(queue='bcc-tcc', durable=True, arguments={'x-queue-type': 'quorum'})
 
-    channel.basic_consume(queue='bcc-tcc', on_message_callback=callback, auto_ack=True)
+    channel.basic_consume(queue='bcc-tcc', on_message_callback=callback, auto_ack=False)
     print(f'[*] Aguardando até {expected_count} mensagens. Pressione CTRL+C para sair')
 
     try:

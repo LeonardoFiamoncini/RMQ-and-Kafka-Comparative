@@ -104,13 +104,19 @@ def send_messages(count=1000, message_size=100, rps=None):
     for i in range(count):
         msg_id = str(i)
         payload = {"id": msg_id, "body": message_content}
-        send_times[msg_id] = time.time()
+        
+        # Enviar mensagem e aguardar confirmação
         future = producer.send('bcc-tcc', value=payload)
         try:
+            # Aguardar confirmação do broker
             future.get(timeout=10)
-            logging.info(f"Mensagem {msg_id} enviada com {message_size} bytes")
+            
+            # Capturar timestamp T1 APÓS a confirmação (precisão melhorada)
+            send_times[msg_id] = time.time()
+            logging.info(f"Mensagem {msg_id} enviada e confirmada com {message_size} bytes")
         except Exception as e:
             logging.error(f"Falha ao enviar mensagem {msg_id}: {e}")
+            # Não registrar timestamp para mensagens que falharam
         
         # Rate Limiting: aguardar o intervalo calculado
         if sleep_interval > 0:

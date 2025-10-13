@@ -33,10 +33,15 @@ def send_messages(count=1000, message_size=100, rps=None):
     connection = pika.BlockingConnection(parameters)
     channel = connection.channel()
     channel.queue_declare(queue='bcc-tcc', durable=True, arguments={'x-queue-type': 'quorum'})
+    
+    # Habilitar confirmação de entrega
     channel.confirm_delivery()
+    logging.info("Confirmação de entrega habilitada")
 
     message_content = 'x' * (message_size - 10)
     start_send = time.time()
+    successful_deliveries = 0
+    failed_deliveries = 0
     
     # Calcular intervalo de sleep para Rate Limiting
     sleep_interval = 0
@@ -48,12 +53,36 @@ def send_messages(count=1000, message_size=100, rps=None):
         msg_id = str(i)
         payload = {"id": msg_id, "body": message_content}
         body = json.dumps(payload)
-        send_times[msg_id] = time.time()
+        
         try:
-            channel.basic_publish(exchange='', routing_key='bcc-tcc', body=body, mandatory=True)
-            logging.info(f"Mensagem {msg_id} enviada com {message_size} bytes")
+            # Publicar mensagem com confirmação de entrega
+            channel.basic_publish(
+                exchange='', 
+                routing_key='bcc-tcc', 
+                body=body, 
+                mandatory=True,
+                properties=pika.BasicProperties(
+                    delivery_mode=2,  # Tornar mensagem persistente
+                    timestamp=int(time.time())
+                )
+            )
+            
+            # Com confirm_delivery() habilitado, se chegou até aqui, a mensagem foi confirmada
+            # Capturar timestamp T1 APÓS a confirmação (precisão melhorada)
+            send_times[msg_id] = time.time()
+            successful_deliveries += 1
+            logging.info(f"Mensagem {msg_id} enviada e confirmada com {message_size} bytes")
+                
         except pika.exceptions.UnroutableError:
-            logging.error(f"Falha ao enviar mensagem {msg_id}")
+            failed_deliveries += 1
+            logging.error(f"Mensagem {msg_id} não pôde ser roteada (UnroutableError)")
+        except pika.exceptions.NackError:
+            failed_deliveries += 1
+            logging.error(f"Mensagem {msg_id} foi rejeitada pelo broker (NackError)")
+        except Exception as e:
+            failed_deliveries += 1
+            logging.error(f"Erro inesperado ao enviar mensagem {msg_id}: {e}")
+            # Não registrar timestamp para mensagens que falharam
         
         # Rate Limiting: aguardar o intervalo calculado
         if sleep_interval > 0:
@@ -61,6 +90,9 @@ def send_messages(count=1000, message_size=100, rps=None):
 
     connection.close()
     end_send = time.time()
+    
+    # Log de estatísticas de entrega
+    logging.info(f"Entrega finalizada: {successful_deliveries} sucessos, {failed_deliveries} falhas")
 
     with open(SEND_TIMES_FILE, 'w') as f:
         json.dump(send_times, f)
@@ -70,6 +102,9 @@ def send_messages(count=1000, message_size=100, rps=None):
         writer = csv.writer(f)
         writer.writerow(['metric', 'value'])
         writer.writerow(['total_sent', count])
+        writer.writerow(['successful_deliveries', successful_deliveries])
+        writer.writerow(['failed_deliveries', failed_deliveries])
+        writer.writerow(['delivery_success_rate', (successful_deliveries / count * 100) if count > 0 else 0])
         writer.writerow(['send_duration_sec', end_send - start_send])
         if rps:
             writer.writerow(['target_rps', rps])
