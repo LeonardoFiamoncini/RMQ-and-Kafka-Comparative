@@ -1,4 +1,4 @@
-# 🎓 RabbitMQ vs Apache Kafka - Benchmark Comparativo para TCC
+# 🎓 Benchmark Comparativo para TCC
 
 **Trabalho de Conclusão de Curso (TCC) - Bacharelado em Ciência da Computação**
 
@@ -87,9 +87,6 @@ pip3 --version
 
 ### Passo 1: Clonagem do Repositório
 ```bash
-# Navegar para o diretório desejado
-cd ~/Documentos
-
 # Clonar o repositório
 git clone <URL_DO_REPOSITORIO>
 cd RMQ-and-Kafka-Comparative
@@ -952,19 +949,7 @@ Este sistema de benchmark foi desenvolvido seguindo rigorosos padrões acadêmic
 3. **Completude**: Todos os aspectos relevantes são testados
 4. **Documentação**: Processo completamente documentado
 
-### Próximos Passos para Análise
-
-1. **Executar todos os testes** seguindo este guia
-2. **Coletar dados** dos arquivos de log
-3. **Analisar resultados** usando as ferramentas fornecidas
-4. **Gerar gráficos** para visualização
-5. **Interpretar dados** no contexto do TCC
-
 ### Contato e Suporte
 
 Para dúvidas sobre a implementação ou análise dos resultados:
-- Consulte a documentação técnica em `docs/spec.md`
-- Verifique os logs em `logs/`
-- Execute os scripts de diagnóstico fornecidos
-
-**Boa sorte com seu TCC! 🎓**
+- **E-mail**: leonardosfiamoncini@gmail.com
