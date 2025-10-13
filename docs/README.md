@@ -183,6 +183,32 @@ curl -s http://localhost:9000 | grep -i kafdrop
 
 ## 🧪 Execução de Todos os Testes
 
+### ⚠️ Preparação Importante
+
+**ANTES de executar qualquer teste, execute estes comandos:**
+
+```bash
+# 1. Ativar ambiente virtual
+source venv/bin/activate
+
+# 2. Verificar se containers estão rodando
+docker compose ps
+
+# 3. Se não estiverem, iniciar
+docker compose up -d
+sleep 60
+
+# 4. Limpar logs antigos (IMPORTANTE!)
+./scripts/clear_logs.sh
+
+# 5. Verificar conectividade
+echo "Testando RabbitMQ..."
+curl -u user:password http://localhost:15672/api/overview | head -1
+
+echo "Testando Kafka..."
+curl -s http://localhost:9000 | grep -i kafdrop | head -1
+```
+
 ### Estrutura dos Testes
 
 O sistema executa **8 categorias principais de testes**, cada uma validando aspectos específicos da aplicação:
@@ -204,9 +230,15 @@ O sistema executa **8 categorias principais de testes**, cada uma validando aspe
 # Ativar ambiente virtual
 source venv/bin/activate
 
-# Teste 1.1: Baseline HTTP
+# Teste 1.1: Baseline HTTP (com servidor)
 echo "=== TESTE 1.1: Baseline HTTP ==="
+# Iniciar servidor em background
+python main.py --server --port 5000 &
+sleep 3
+# Executar teste
 python main.py --count 10 --size 200 --only baseline
+# Parar servidor
+pkill -f "python main.py --server"
 
 # Teste 1.2: RabbitMQ
 echo "=== TESTE 1.2: RabbitMQ ==="
@@ -372,6 +404,10 @@ echo "=================================================="
 # Ativar ambiente virtual
 source venv/bin/activate
 
+# Limpar logs antigos para evitar confusão
+echo "🧹 Limpando logs antigos..."
+./scripts/clear_logs.sh
+
 # Verificar se containers estão rodando
 if ! docker compose ps | grep -q "Up"; then
     echo "❌ Containers não estão rodando. Iniciando..."
@@ -381,7 +417,12 @@ fi
 
 # Executar todos os testes
 echo "🧪 Executando Teste 1: Validação Básica"
+# Baseline com servidor
+python main.py --server --port 5000 &
+sleep 3
 python main.py --count 10 --size 200 --only baseline
+pkill -f "python main.py --server"
+# RabbitMQ e Kafka
 python main.py --count 8 --size 150 --only rabbitmq
 python main.py --count 8 --size 150 --only kafka
 
@@ -828,6 +869,23 @@ python main.py --server --port 5000 &
 
 # Testar conectividade
 curl -X POST http://localhost:5000/notify -H "Content-Type: application/json" -d '{"message": "test"}'
+```
+
+#### 9. **Erro: "Arquivo de tempos de envio não encontrado"**
+```bash
+# Limpar logs antigos que podem estar causando confusão
+./scripts/clear_logs.sh
+
+# Executar teste novamente
+python main.py --count 5 --size 100 --only rabbitmq
+```
+
+#### 10. **Erro: "Mensagem recebida sem timestamp correspondente"**
+```bash
+# Este erro indica que o consumidor está lendo mensagens antigas
+# Limpar logs e executar teste limpo
+./scripts/clear_logs.sh
+python main.py --count 5 --size 100 --only kafka
 ```
 
 ### Logs de Debug
