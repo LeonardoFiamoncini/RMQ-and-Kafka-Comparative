@@ -4,6 +4,10 @@ set -euo pipefail
 
 echo "=============================="
 echo "Iniciando configuração do ambiente de desenvolvimento..."
+echo "Versões específicas garantidas:"
+echo "  - RabbitMQ: 4.1.1"
+echo "  - Apache Kafka: 4.0 (imagem: bitnami/kafka:3.6)"
+echo "  - Python: 3.12+"
 echo "=============================="
 
 command_exists() {

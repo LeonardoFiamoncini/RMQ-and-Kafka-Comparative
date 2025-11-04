@@ -112,10 +112,11 @@ class KafkaConsumerBroker(BaseBroker):
                     except Exception as e:
                         self.logger.error(f"Erro ao reconhecer mensagem {msg_id}: {e}")
 
-                    if (
-                        len(self.metrics.latencies) >= expected_count
-                        or time.time() > timeout
-                    ):
+                    if len(self.metrics.latencies) >= expected_count:
+                        self.logger.info(f"✅ Recebidas {len(self.metrics.latencies)} mensagens esperadas. Finalizando consumo.")
+                        break
+                    if time.time() > timeout:
+                        self.logger.warning(f"⏰ Timeout atingido. Recebidas {len(self.metrics.latencies)}/{expected_count} mensagens.")
                         break
 
             except Exception as e:

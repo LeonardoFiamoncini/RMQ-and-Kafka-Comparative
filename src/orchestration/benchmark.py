@@ -4,9 +4,13 @@ Módulo de orquestração de benchmarks
 
 import time
 from multiprocessing import Pool
+from threading import Thread
 from typing import Any, Dict, Optional
 
+import subprocess
+
 from ..brokers.baseline.client import BaselineClient
+from ..brokers.baseline.server import BaselineServer
 from ..brokers.kafka.consumer import KafkaConsumerBroker as KafkaCons
 from ..brokers.kafka.producer import KafkaProducerBroker as KafkaProd
 from ..brokers.rabbitmq.consumer import RabbitMQConsumer as RabbitMQCons
@@ -102,13 +106,24 @@ class BenchmarkOrchestrator:
 
         # Iniciar consumidores (exceto para baseline)
         consumer_results = []
+        consumer_threads = []
         if tech != "baseline":
             self.logger.info(f"   • Iniciando {num_consumers} consumidor(es)...")
-            with Pool(processes=num_consumers) as pool:
-                consumer_args = [(tech, i, count) for i in range(num_consumers)]
-                consumer_results = pool.starmap(
-                    self.run_consumer_process, consumer_args
-                )
+            
+            # Iniciar consumidores em threads separadas para não bloquear
+            def run_consumer_wrapper(tech_arg, consumer_id_arg, expected_count_arg):
+                """Wrapper para executar consumidor e armazenar resultado"""
+                try:
+                    result = self.run_consumer_process(tech_arg, consumer_id_arg, expected_count_arg)
+                    consumer_results.append(result)
+                except Exception as e:
+                    self.logger.error(f"Erro no consumidor {consumer_id_arg}: {e}")
+                    consumer_results.append({"success": False, "consumer_id": consumer_id_arg, "error": str(e)})
+            
+            for i in range(num_consumers):
+                thread = Thread(target=run_consumer_wrapper, args=(tech, i, count), daemon=True)
+                thread.start()
+                consumer_threads.append(thread)
 
             # Aguardar um pouco para os consumidores se conectarem
             time.sleep(3)
@@ -126,6 +141,11 @@ class BenchmarkOrchestrator:
                 for i in range(num_producers)
             ]
             producer_results = pool.starmap(self.run_producer_process, producer_args)
+        
+        # Aguardar consumidores terminarem (com timeout)
+        if tech != "baseline":
+            for thread in consumer_threads:
+                thread.join(timeout=120)  # Timeout de 2 minutos
 
         end_time = time.time()
 
@@ -199,10 +219,22 @@ class BenchmarkOrchestrator:
         """
         technologies = ["rabbitmq", "kafka", "baseline"]
         all_results = {}
+        
+        # Iniciar servidor baseline se necessário
+        baseline_server = None
+        baseline_port = 5000
 
         for tech in technologies:
             self.logger.info(f"\n{'='*60}")
             try:
+                # Iniciar servidor baseline antes do benchmark baseline
+                if tech == "baseline" and baseline_server is None:
+                    self.logger.info("🚀 Iniciando servidor baseline...")
+                    baseline_server = BaselineServer(port=baseline_port)
+                    baseline_thread = Thread(target=baseline_server.run, daemon=True)
+                    baseline_thread.start()
+                    time.sleep(3)  # Aguardar servidor iniciar
+                
                 results = self.run_benchmark(
                     tech, count, size, num_producers, num_consumers, rps
                 )
@@ -210,5 +242,13 @@ class BenchmarkOrchestrator:
             except Exception as e:
                 self.logger.error(f"Erro no benchmark {tech}: {e}")
                 all_results[tech] = {"error": str(e)}
+        
+        # Parar servidor baseline se foi iniciado
+        if baseline_server is not None:
+            self.logger.info("🛑 Parando servidor baseline...")
+            try:
+                subprocess.run(["pkill", "-f", "python.*baseline"], timeout=5)
+            except:
+                pass
 
         return all_results

@@ -27,11 +27,12 @@ Este projeto implementa um sistema completo de benchmark comparativo entre **Rab
 - **Reprodutibilidade**: Metodologia científica rigorosa para replicação dos resultados
 
 ### Tecnologias Implementadas
-- **RabbitMQ 4.1.1**: Com Quorum Queues e cluster de 3 nós
-- **Apache Kafka 4.0**: Com KRaft mode e Queue Mode (KIP-932)
-- **HTTP Síncrono**: Baseline para comparação de latência
+- **RabbitMQ 4.1.1** (imagem: `rabbitmq:4.1.1-management`): Com Quorum Queues e cluster de 3 nós
+- **Apache Kafka 4.0** (imagem: `bitnami/kafka:3.6`): Com KRaft mode e Queue Mode (KIP-932)
+- **HTTP Síncrono**: Baseline para comparação de latência (Flask)
 - **Docker**: Containerização completa da infraestrutura
-- **Python 3.12**: Implementação dos clientes e orquestração
+- **Python 3.12+**: Implementação dos clientes e orquestração
+- **Kafdrop 3.30.0**: Interface web para monitoramento do Kafka
 
 ### Métricas Coletadas
 - **Latência End-to-End**: Tempo total de envio até processamento
@@ -45,7 +46,10 @@ Este projeto implementa um sistema completo de benchmark comparativo entre **Rab
 ## 🖥️ Pré-requisitos do Sistema
 
 ### Especificações Mínimas
-- **Sistema Operacional**: Ubuntu 22.04 LTS ou superior
+- **Sistema Operacional**: 
+  - **Linux**: Ubuntu 22.04 LTS ou superior, Debian 11+, Fedora 36+, ou qualquer distribuição com suporte a Docker
+  - **macOS**: macOS 11 (Big Sur) ou superior
+  - **Windows**: Windows 10/11 com WSL2 ou Docker Desktop
 - **RAM**: Mínimo 4GB (recomendado 8GB)
 - **CPU**: Mínimo 2 cores (recomendado 4 cores)
 - **Armazenamento**: Mínimo 10GB livres
@@ -53,15 +57,18 @@ Este projeto implementa um sistema completo de benchmark comparativo entre **Rab
 
 ### Software Necessário
 - **Docker**: Versão 20.10 ou superior
-- **Docker Compose**: Versão 2.0 ou superior
-- **Python**: Versão 3.10 ou superior
+- **Docker Compose**: Versão 2.0 ou superior (plugin ou standalone)
+- **Python**: Versão 3.10 ou superior (3.12 recomendado)
 - **Git**: Para clonagem do repositório
 - **Curl**: Para testes de conectividade
+- **Bash**: Para execução dos scripts de setup (Linux/macOS) ou Git Bash/WSL (Windows)
 
 ### Verificação dos Pré-requisitos
+
+#### Linux (Ubuntu/Debian/Fedora)
 ```bash
-# Verificar versão do Ubuntu
-lsb_release -a
+# Verificar versão do sistema
+lsb_release -a 2>/dev/null || cat /etc/os-release
 
 # Verificar RAM disponível
 free -h
@@ -81,6 +88,44 @@ python3 --version
 pip3 --version
 ```
 
+#### macOS
+```bash
+# Verificar versão do macOS
+sw_vers
+
+# Verificar RAM disponível
+sysctl hw.memsize | awk '{print $2/1024/1024/1024 " GB"}'
+
+# Verificar CPU
+sysctl -n hw.ncpu
+
+# Verificar espaço em disco
+df -h
+
+# Verificar Docker
+docker --version
+docker compose version
+
+# Verificar Python
+python3 --version
+pip3 --version
+```
+
+#### Windows (WSL2 ou Docker Desktop)
+```powershell
+# No PowerShell ou WSL
+# Verificar versão do Windows
+systeminfo | findstr /B /C:"OS Name" /C:"OS Version"
+
+# Verificar Docker
+docker --version
+docker compose version
+
+# Verificar Python (no WSL)
+python3 --version
+pip3 --version
+```
+
 ---
 
 ## 🚀 Instalação Completa
@@ -96,6 +141,10 @@ ls -la
 ```
 
 ### Passo 2: Configuração Automática do Ambiente
+
+**Compatibilidade Multi-OS**: O script `setup_dev_environment.sh` funciona em Linux e macOS. Para Windows, use WSL2 ou Docker Desktop.
+
+#### Linux/macOS
 ```bash
 # Dar permissões de execução
 chmod +x scripts/setup_dev_environment.sh
@@ -104,10 +153,31 @@ chmod +x scripts/setup_dev_environment.sh
 ./scripts/setup_dev_environment.sh
 ```
 
+#### Windows (WSL2)
+```bash
+# No terminal WSL2
+chmod +x scripts/setup_dev_environment.sh
+./scripts/setup_dev_environment.sh
+```
+
+#### Windows (Docker Desktop)
+```powershell
+# Instalar Docker Desktop manualmente:
+# https://www.docker.com/products/docker-desktop
+
+# No PowerShell ou WSL2, instalar Python e dependências:
+python -m venv venv
+.\venv\Scripts\activate  # PowerShell
+# ou
+source venv/bin/activate  # WSL2
+
+pip install -r requirements.txt
+```
+
 **⚠️ IMPORTANTE**: Durante a execução do script:
-- Digite sua senha quando solicitado
+- Digite sua senha quando solicitado (Linux/macOS)
 - Aguarde a instalação do Docker (pode demorar alguns minutos)
-- **REINICIE O TERMINAL** após a conclusão para aplicar permissões do Docker
+- **REINICIE O TERMINAL** após a conclusão para aplicar permissões do Docker (Linux)
 
 ### Passo 3: Verificação da Instalação
 ```bash
@@ -958,10 +1028,11 @@ main.py → BenchmarkOrchestrator → Broker Classes → Metrics Collection → 
 - **Configurações**: Confirmação de entrega, mensagens persistentes
 
 #### Apache Kafka
-- **Versão**: 4.0
+- **Versão**: 4.0 (imagem Docker: `bitnami/kafka:3.6`)
 - **Modo**: KRaft (sem Zookeeper)
 - **Queue Mode**: Simulação de KIP-932
 - **Portas**: 9092 (Broker), 9000 (Kafdrop)
+- **Nota**: A tag `3.6` do Bitnami garante reprodutibilidade e suporta KRaft. A numeração do Bitnami não corresponde exatamente à versão do Kafka. Para Kafka 4.0 exato, verifique tags disponíveis em: https://hub.docker.com/r/bitnami/kafka/tags
 
 #### Baseline HTTP
 - **Framework**: Flask
