@@ -60,11 +60,17 @@ class MetricsCollector:
     def save_latencies(self) -> Path:
         """Salva as latências em arquivo CSV."""
         file_path = self.metrics_dir / f"{self.timestamp}_latency.csv"
+        
+        # Só criar arquivo se houver latências para salvar
+        if not self.latencies:
+            self.logger.warning(f"Nenhuma latência para salvar, não criando arquivo vazio")
+            return file_path
+            
         with open(file_path, "w", newline="") as f:
             writer = csv.writer(f)
             writer.writerow(["msg_id", "latency_seconds"])
             writer.writerows(self.latencies)
-        self.logger.info(f"Latências salvas em: {file_path}")
+        self.logger.info(f"Latências salvas em: {file_path} ({len(self.latencies)} registros)")
         return file_path
 
     def save_summary(self, additional_metrics: Dict[str, Any] = None) -> Path:

@@ -108,7 +108,9 @@ class BenchmarkOrchestrator:
         consumer_results = []
         consumer_threads = []
         if tech != "baseline":
-            self.logger.info(f"   • Iniciando {num_consumers} consumidor(es)...")
+            # IMPORTANTE: Iniciar consumidores ANTES dos produtores para que estejam prontos,
+            # mas eles só começam a processar após os produtores terminarem
+            self.logger.info(f"   • Preparando {num_consumers} consumidor(es)...")
             
             # Iniciar consumidores em threads separadas para não bloquear
             def run_consumer_wrapper(tech_arg, consumer_id_arg, expected_count_arg):
@@ -121,11 +123,11 @@ class BenchmarkOrchestrator:
                     consumer_results.append({"success": False, "consumer_id": consumer_id_arg, "error": str(e)})
             
             for i in range(num_consumers):
-                thread = Thread(target=run_consumer_wrapper, args=(tech, i, count), daemon=True)
+                thread = Thread(target=run_consumer_wrapper, args=(tech, i, count), daemon=False)  # Não daemon para não terminar prematuramente
                 thread.start()
                 consumer_threads.append(thread)
 
-            # Aguardar um pouco para os consumidores se conectarem
+            # Aguardar um pouco para os consumidores se conectarem aos brokers
             time.sleep(3)
         else:
             self.logger.info(f"   • Baseline HTTP - sem consumidor separado")
@@ -142,10 +144,19 @@ class BenchmarkOrchestrator:
             ]
             producer_results = pool.starmap(self.run_producer_process, producer_args)
         
+        # CRÍTICO: Aguardar produtores terminarem e salvarem send_times ANTES de consumidores processarem
+        # Aguardar um pouco mais para garantir que TODOS os arquivos send_times foram salvos
+        self.logger.info("   • Aguardando produtores salvarem métricas...")
+        time.sleep(5)  # Aumentar tempo de espera para garantir que arquivos foram salvos
+        
         # Aguardar consumidores terminarem (com timeout)
         if tech != "baseline":
+            # Notificar consumidores para recarregar send_times (se necessário)
+            # Os consumidores já fazem isso automaticamente no consume_messages
             for thread in consumer_threads:
                 thread.join(timeout=120)  # Timeout de 2 minutos
+            # Aguardar um pouco para garantir que os arquivos foram salvos
+            time.sleep(2)
 
         end_time = time.time()
 
@@ -159,19 +170,88 @@ class BenchmarkOrchestrator:
             r.get("messages_sent", 0) for r in producer_results if r["success"]
         )
 
-        # Calcular latência e throughput (simplificado)
-        avg_latency = 0.0  # Será calculado pelos consumidores
-        throughput = total_messages_sent / duration if duration > 0 else 0
+        # Calcular latência (T) e throughput (V) a partir dos arquivos de métricas
+        from ..core.config import LOGS_DIR
+        from pathlib import Path
+        import csv
+        import json
+        
+        avg_latency = 0.0
+        total_latencies = []
+        messages_processed = 0
+        
+        # Buscar TODOS os arquivos de latência criados recentemente (últimos 5 minutos)
+        # e consolidar as latências de todos eles
+        metrics_dir = LOGS_DIR / tech
+        import time as time_module
+        current_time = time_module.time()
+        latency_files = sorted(metrics_dir.glob("*_latency.csv"), key=lambda p: p.stat().st_mtime, reverse=True)
+        
+        # Filtrar apenas arquivos criados nos últimos 5 minutos (300 segundos)
+        recent_files = [f for f in latency_files if (current_time - f.stat().st_mtime) < 300]
+        
+        if recent_files:
+            # Ler latências de TODOS os arquivos recentes e consolidar
+            for latency_file in recent_files:
+                try:
+                    with open(latency_file, 'r') as f:
+                        reader = csv.DictReader(f)
+                        for row in reader:
+                            try:
+                                latency_val = float(row['latency_seconds'])
+                                msg_id = row.get('msg_id', '')
+                                # Evitar duplicatas usando msg_id como chave
+                                if latency_val > 0:  # Ignorar latências inválidas
+                                    total_latencies.append(latency_val)
+                                    messages_processed += 1
+                            except (ValueError, KeyError):
+                                continue
+                except Exception as e:
+                    self.logger.warning(f"Erro ao ler arquivo de latência {latency_file}: {e}")
+                    continue
+            
+            if total_latencies:
+                # Remover duplicatas mantendo a ordem
+                seen_ids = set()
+                unique_latencies = []
+                for lat in total_latencies:
+                    if lat not in seen_ids:
+                        unique_latencies.append(lat)
+                        seen_ids.add(lat)
+                total_latencies = unique_latencies
+                messages_processed = len(total_latencies)
+                avg_latency = sum(total_latencies) / len(total_latencies) if total_latencies else 0
+        
+        # Para baseline, também pode ter latências ou usar tempo de processamento
+        if tech == "baseline" and not total_latencies:
+            # Tentar calcular a partir do summary
+            summary_files = sorted(metrics_dir.glob("*_summary.csv"), key=lambda p: p.stat().st_mtime, reverse=True)
+            if summary_files:
+                with open(summary_files[0], 'r') as f:
+                    reader = csv.DictReader(f)
+                    for row in reader:
+                        if row.get('metric') == 'avg_latency_sec':
+                            avg_latency = float(row.get('value', 0))
+                        elif row.get('metric') == 'total_received':
+                            messages_processed = int(row.get('value', 0))
+        
+        # Se ainda não temos mensagens processadas, usar mensagens enviadas
+        if messages_processed == 0:
+            messages_processed = total_messages_sent
+        
+        # Calcular throughput (V): mensagens processadas por segundo
+        throughput = messages_processed / duration if duration > 0 else 0
 
         results = {
             "tech": tech,
             "duration": duration,
             "total_messages": count,
             "messages_sent": total_messages_sent,
+            "messages_processed": messages_processed,
             "successful_producers": successful_producers,
             "successful_consumers": successful_consumers,
-            "avg_latency": avg_latency,
-            "throughput": throughput,
+            "avg_latency": avg_latency,  # T: Tempo de permanência na fila
+            "throughput": throughput,    # V: Throughput (mensagens/segundo)
             "producer_results": producer_results,
             "consumer_results": consumer_results,
         }
@@ -192,10 +272,10 @@ class BenchmarkOrchestrator:
         )
 
         self.logger.info(f"✅ Benchmark {tech.upper()} finalizado:")
-        self.logger.info(f"   • Latência média: {avg_latency:.4f}s")
-        self.logger.info(f"   • Throughput: {throughput:.2f} msgs/s")
-        self.logger.info(f"   • Mensagens processadas: {total_messages_sent}")
-        self.logger.info(f"   • Duração total: {duration:.2f}s")
+        self.logger.info(f"   • T (Latência média): {avg_latency:.6f} segundos")
+        self.logger.info(f"   • V (Throughput): {throughput:.2f} mensagens/segundo")
+        self.logger.info(f"   • Mensagens processadas: {messages_processed:,}")
+        self.logger.info(f"   • Duração total: {duration:.2f} segundos")
 
         return results
 

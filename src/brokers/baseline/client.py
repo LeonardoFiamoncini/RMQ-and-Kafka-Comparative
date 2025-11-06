@@ -60,17 +60,30 @@ class BaselineClient(BaseBroker):
                 payload = {"id": msg_id, "body": message_content}
 
                 try:
+                    # Capturar timestamp ANTES de enviar (T1)
+                    send_time = time.time()
+                    self.metrics.record_send_time(msg_id, send_time)
+                    
                     response = requests.post(
                         f"{self.base_url}{self.config['endpoint']}",
                         json=payload,
                         timeout=5,
                     )
+                    
+                    # Capturar timestamp APÓS receber resposta (T2)
+                    recv_time = time.time()
+                    
                     if response.status_code == 200:
                         successful_requests += 1
-                        # Capturar timestamp APÓS a resposta do servidor (T1)
-                        self.metrics.record_send_time(msg_id, time.time())
+                        # Calcular latência: tempo de resposta HTTP (T2 - T1)
+                        # Para baseline síncrono, a latência é o tempo total da requisição
+                        latency = recv_time - send_time
+                        self.metrics.record_latency(msg_id, latency)
+                        processing_time = response.json().get('processing_time', 0)
                         self.logger.info(
-                            f"Mensagem {msg_id} enviada com sucesso - Tempo de processamento: {response.json().get('processing_time'):.6f}s"
+                            f"Mensagem {msg_id} enviada com sucesso - "
+                            f"Latência total: {latency:.6f}s, "
+                            f"Tempo de processamento servidor: {processing_time:.6f}s"
                         )
                     else:
                         failed_requests += 1

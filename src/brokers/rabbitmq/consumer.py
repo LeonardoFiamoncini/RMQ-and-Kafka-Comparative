@@ -27,31 +27,81 @@ class RabbitMQConsumer(BaseBroker):
 
     def _load_send_times(self):
         """Carrega os tempos de envio do arquivo mais recente"""
-        try:
-            # Tentar carregar arquivo específico primeiro
-            send_times_file = (
-                self.metrics.metrics_dir / f"{self.metrics.timestamp}_send_times.json"
-            )
-            if send_times_file.exists():
-                with open(send_times_file, "r") as f:
-                    self.send_times = json.load(f)
-                return
-
-            # Se não existir, buscar o arquivo mais recente
-            send_times_files = glob.glob(
-                str(self.metrics.metrics_dir / "*_send_times.json")
-            )
-            if send_times_files:
-                latest_file = max(send_times_files, key=os.path.getctime)
-                with open(latest_file, "r") as f:
-                    self.send_times = json.load(f)
-                self.logger.info(f"Usando arquivo de tempos: {latest_file}")
-            else:
-                self.logger.error("Arquivo de tempos de envio não encontrado.")
-                self.send_times = {}
-        except Exception as e:
-            self.logger.error(f"Erro ao carregar tempos de envio: {e}")
-            self.send_times = {}
+        # Tentar múltiplas vezes se o arquivo não existir (produtores podem estar salvando)
+        max_retries = 10
+        retry_delay = 0.5  # 500ms
+        
+        for attempt in range(max_retries):
+            try:
+                # Buscar TODOS os arquivos send_times e consolidá-los
+                # (múltiplos produtores podem ter criado arquivos separados)
+                send_times_files = glob.glob(
+                    str(self.metrics.metrics_dir / "*_send_times.json")
+                )
+                if send_times_files:
+                    # Ordenar por mtime (mais recente primeiro)
+                    send_times_files.sort(key=os.path.getmtime, reverse=True)
+                
+                # Consolidar todos os arquivos send_times (de múltiplos produtores)
+                consolidated_send_times = {}
+                for file_path in send_times_files:
+                    try:
+                        with open(file_path, "r") as f:
+                            content = f.read().strip()
+                            # Tentar corrigir JSON malformado (pode ter múltiplos objetos)
+                            # Se começar com {}{, significa que há múltiplos objetos JSON
+                            if content.startswith('{}{'):
+                                # Pegar o último objeto JSON válido (o mais completo)
+                                # Procurar por todos os pares de chaves
+                                brace_count = 0
+                                last_brace = -1
+                                start_brace = -1
+                                for i, char in enumerate(content):
+                                    if char == '{':
+                                        if brace_count == 0:
+                                            start_brace = i
+                                        brace_count += 1
+                                    elif char == '}':
+                                        brace_count -= 1
+                                        if brace_count == 0:
+                                            last_brace = i
+                                if start_brace >= 0 and last_brace > start_brace:
+                                    content = content[start_brace:last_brace+1]
+                                else:
+                                    # Fallback: pegar o último objeto
+                                    last_brace = content.rfind('}')
+                                    if last_brace > 0:
+                                        content = content[content.rfind('{', 0, last_brace):last_brace+1]
+                            # Parsear JSON
+                            file_data = json.loads(content)
+                            # Fazer merge (arquivos mais recentes sobrescrevem)
+                            if isinstance(file_data, dict):
+                                consolidated_send_times.update(file_data)
+                    except (json.JSONDecodeError, ValueError) as e:
+                        self.logger.warning(f"Erro ao fazer parse do JSON em {file_path}: {e}")
+                        continue
+                
+                    self.send_times = consolidated_send_times
+                    self.logger.info(f"Consolidados {len(send_times_files)} arquivos send_times: {len(self.send_times)} timestamps únicos")
+                    return  # Sucesso, sair do loop de retry
+                else:
+                    # Arquivo não existe ainda, tentar novamente
+                    if attempt < max_retries - 1:
+                        time.sleep(retry_delay)
+                        continue
+                    else:
+                        self.logger.warning(f"Arquivo de tempos de envio não encontrado após {max_retries} tentativas.")
+                        self.send_times = {}
+                        return
+            except Exception as e:
+                if attempt < max_retries - 1:
+                    self.logger.debug(f"Erro ao carregar send_times (tentativa {attempt+1}/{max_retries}): {e}")
+                    time.sleep(retry_delay)
+                    continue
+                else:
+                    self.logger.error(f"Erro ao carregar tempos de envio após {max_retries} tentativas: {e}")
+                    self.send_times = {}
+                    return
 
     def _callback(self, ch, method, properties, body):
         """Callback para processar mensagens recebidas"""
@@ -69,6 +119,17 @@ class RabbitMQConsumer(BaseBroker):
             return
 
         try:
+            # Se não encontrar o timestamp, tentar recarregar send_times
+            # (os produtores podem ter terminado de salvar após o início do consumo)
+            if msg_id not in self.send_times:
+                # Recarregar send_times se não encontrar (produtores podem ter salvado entretanto)
+                self.logger.debug(f"Timestamp não encontrado para {msg_id}, recarregando send_times...")
+                old_count = len(self.send_times)
+                self._load_send_times()
+                new_count = len(self.send_times)
+                if new_count > old_count:
+                    self.logger.info(f"Send_times recarregado: {old_count} -> {new_count} timestamps")
+            
             # Processar mensagem
             if msg_id in self.send_times:
                 latency = recv_time - float(self.send_times[msg_id])
@@ -78,7 +139,7 @@ class RabbitMQConsumer(BaseBroker):
                 )
             else:
                 self.logger.warning(
-                    f"Mensagem {msg_id} recebida sem timestamp correspondente"
+                    f"Mensagem {msg_id} recebida sem timestamp correspondente (send_times tem {len(self.send_times)} entradas)"
                 )
 
             # Confirmar processamento bem-sucedido (ack)
@@ -95,6 +156,10 @@ class RabbitMQConsumer(BaseBroker):
         Consome mensagens do RabbitMQ
         """
         try:
+            # Recarregar send_times antes de começar a consumir
+            # (os produtores podem ter terminado de salvar após o __init__)
+            self._load_send_times()
+            
             # Inicializar métricas
             self.metrics.start_timing()
 
@@ -138,9 +203,15 @@ class RabbitMQConsumer(BaseBroker):
                 channel.stop_consuming()
                 connection.close()
                 self.metrics.end_timing()
+                
+                # Salvar métricas apenas se houver latências coletadas
+                # (evitar salvar arquivos vazios que sobrescrevem arquivos com dados)
+                if len(self.metrics.latencies) > 0:
+                    self.logger.info(f"Salvando {len(self.metrics.latencies)} latências coletadas")
+                    self.save_metrics()
+                else:
+                    self.logger.warning("Nenhuma latência coletada, não salvando métricas vazias")
 
-            # Salvar métricas
-            self.save_metrics()
             return True
 
         except Exception as e:

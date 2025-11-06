@@ -253,6 +253,66 @@ curl -s http://localhost:9000 | grep -i kafdrop
 
 ## 🧪 Execução de Todos os Testes
 
+### 📋 Parâmetros de Entrada (Obrigatórios)
+
+Para garantir medições assertivas, o sistema utiliza parâmetros específicos passados via linha de comando:
+
+#### **a) Número de Mensagens (`--count`)**
+- **Valores válidos**: `10`, `100`, `1000`, `10000`, `100000`
+- **Descrição**: Quantidade total de mensagens a serem enviadas e processadas
+
+#### **b) Número de Produtores (`--producers`)**
+- **Valores válidos**: `1`, `4`, `16`, `64`
+- **Descrição**: Número de clientes/produtores simultâneos enviando mensagens
+
+#### **c) Número de Consumidores (`--consumers`)**
+- **Valores válidos**: `4`, `64`
+- **Descrição**: Número de consumidores processando mensagens da fila
+
+#### **d) Sistema (`--system`)**
+- **Valores válidos**: `rabbitmq`, `kafka`, `baseline`
+- **Descrição**: Sistema de mensageria a ser testado
+
+#### **Parâmetros Opcionais**
+- `--size`: Tamanho de cada mensagem em bytes (padrão: 200)
+- `--rps`: Rate Limiting - mensagens por segundo (opcional)
+
+### 📊 Métricas de Saída Coletadas
+
+O sistema coleta e exibe as seguintes métricas:
+
+#### **i) T (Tempo de Permanência na Fila)**
+- **Definição**: Latência média de uma mensagem desde o envio até o processamento
+- **Unidade**: Segundos (com precisão de microssegundos)
+- **Arquivo**: `logs/<system>/*_latency.csv`
+
+#### **ii) V (Throughput / Vazão)**
+- **Definição**: Número de mensagens processadas por unidade de tempo
+- **Unidade**: Mensagens por segundo
+- **Cálculo**: `V = mensagens_processadas / duração_total`
+
+### 📝 Exemplos de Uso
+
+#### **Exemplo 1: Teste Básico com RabbitMQ**
+```bash
+python main.py --count 100 --producers 1 --consumers 4 --system rabbitmq
+```
+
+#### **Exemplo 2: Teste com Múltiplos Produtores (Kafka)**
+```bash
+python main.py --count 1000 --producers 16 --consumers 64 --system kafka
+```
+
+#### **Exemplo 3: Teste de Alta Carga (Baseline)**
+```bash
+python main.py --count 10000 --producers 64 --consumers 64 --system baseline
+```
+
+#### **Exemplo 4: Teste com Rate Limiting**
+```bash
+python main.py --count 1000 --producers 4 --consumers 4 --system rabbitmq --rps 100
+```
+
 ### ⚠️ Preparação Importante
 
 **ANTES de executar qualquer teste, execute estes comandos:**
@@ -306,17 +366,17 @@ echo "=== TESTE 1.1: Baseline HTTP ==="
 python main.py --server --port 5000 &
 sleep 3
 # Executar teste
-python main.py --count 10 --size 200 --only baseline
+python main.py --count 10 --producers 1 --consumers 4 --system baseline
 # Parar servidor
 pkill -f "python main.py --server"
 
 # Teste 1.2: RabbitMQ
 echo "=== TESTE 1.2: RabbitMQ ==="
-python main.py --count 8 --size 150 --only rabbitmq
+python main.py --count 100 --producers 1 --consumers 4 --system rabbitmq
 
 # Teste 1.3: Kafka
 echo "=== TESTE 1.3: Kafka ==="
-python main.py --count 8 --size 150 --only kafka
+python main.py --count 100 --producers 1 --consumers 4 --system kafka
 ```
 
 **✅ Critério de Sucesso**: Todos os testes devem mostrar "✅ Benchmark finalizado" sem erros.
@@ -326,15 +386,18 @@ python main.py --count 8 --size 150 --only kafka
 ```bash
 # Teste 2.1: Baseline com RPS
 echo "=== TESTE 2.1: Baseline com Rate Limiting ==="
-python main.py --count 8 --size 100 --rps 3 --only baseline
+python main.py --server --port 5000 &
+sleep 3
+python main.py --count 100 --producers 1 --consumers 4 --system baseline --rps 10
+pkill -f "python main.py --server"
 
 # Teste 2.2: RabbitMQ com RPS
 echo "=== TESTE 2.2: RabbitMQ com Rate Limiting ==="
-python main.py --count 6 --size 100 --rps 2 --only rabbitmq
+python main.py --count 100 --producers 4 --consumers 4 --system rabbitmq --rps 20
 
 # Teste 2.3: Kafka com RPS
 echo "=== TESTE 2.3: Kafka com Rate Limiting ==="
-python main.py --count 6 --size 100 --rps 2 --only kafka
+python main.py --count 100 --producers 4 --consumers 4 --system kafka --rps 20
 ```
 
 **✅ Critério de Sucesso**: Throughput deve estar próximo ao RPS especificado.
@@ -344,15 +407,18 @@ python main.py --count 6 --size 100 --rps 2 --only kafka
 ```bash
 # Teste 3.1: Baseline com múltiplos clientes
 echo "=== TESTE 3.1: Baseline - Múltiplos Clientes ==="
-python main.py --count 12 --size 100 --producers 3 --consumers 2 --only baseline
+python main.py --server --port 5000 &
+sleep 3
+python main.py --count 1000 --producers 16 --consumers 4 --system baseline
+pkill -f "python main.py --server"
 
 # Teste 3.2: RabbitMQ com múltiplos clientes
 echo "=== TESTE 3.2: RabbitMQ - Múltiplos Clientes ==="
-python main.py --count 8 --size 100 --producers 2 --consumers 2 --only rabbitmq
+python main.py --count 1000 --producers 16 --consumers 64 --system rabbitmq
 
 # Teste 3.3: Kafka com múltiplos clientes
 echo "=== TESTE 3.3: Kafka - Múltiplos Clientes ==="
-python main.py --count 8 --size 100 --producers 2 --consumers 2 --only kafka
+python main.py --count 1000 --producers 16 --consumers 64 --system kafka
 ```
 
 **✅ Critério de Sucesso**: Throughput deve aumentar proporcionalmente ao número de clientes.
@@ -394,17 +460,20 @@ python main.py --count 5 --size 100 --only kafka
 #### **TESTE 6: Benchmarks Integrados**
 
 ```bash
-# Teste 6.1: Benchmark Completo (Todos os Brokers)
-echo "=== TESTE 6.1: Benchmark Completo ==="
-python main.py --count 10 --size 100
+# Teste 6.1: Benchmark RabbitMQ
+echo "=== TESTE 6.1: Benchmark RabbitMQ ==="
+python main.py --count 1000 --producers 4 --consumers 4 --system rabbitmq
 
-# Teste 6.2: Benchmark com Rate Limiting
-echo "=== TESTE 6.2: Benchmark com Rate Limiting ==="
-python main.py --count 20 --size 100 --rps 5
+# Teste 6.2: Benchmark Kafka
+echo "=== TESTE 6.2: Benchmark Kafka ==="
+python main.py --count 1000 --producers 4 --consumers 4 --system kafka
 
-# Teste 6.3: Benchmark com Múltiplos Clientes
-echo "=== TESTE 6.3: Benchmark com Múltiplos Clientes ==="
-python main.py --count 30 --size 100 --producers 3 --consumers 2
+# Teste 6.3: Benchmark Baseline
+echo "=== TESTE 6.3: Benchmark Baseline ==="
+python main.py --server --port 5000 &
+sleep 3
+python main.py --count 1000 --producers 4 --consumers 4 --system baseline
+pkill -f "python main.py --server"
 ```
 
 **✅ Critério de Sucesso**: Todos os brokers devem ser testados em sequência.
@@ -432,29 +501,34 @@ pkill -f "python main.py --server"
 #### **TESTE 8: Performance Comparativa Extensiva**
 
 ```bash
-# Teste 8.1: Performance com diferentes tamanhos de mensagem
-echo "=== TESTE 8.1: Performance - Tamanhos Variados ==="
-python main.py --count 50 --size 64 --only baseline
-python main.py --count 50 --size 64 --only rabbitmq
-python main.py --count 50 --size 64 --only kafka
+# Teste 8.1: Performance com diferentes números de mensagens
+echo "=== TESTE 8.1: Performance - Volume de Mensagens ==="
+# Teste com 10 mensagens
+python main.py --count 10 --producers 1 --consumers 4 --system rabbitmq
+python main.py --count 10 --producers 1 --consumers 4 --system kafka
 
-python main.py --count 50 --size 1024 --only baseline
-python main.py --count 50 --size 1024 --only rabbitmq
-python main.py --count 50 --size 1024 --only kafka
+# Teste com 100 mensagens
+python main.py --count 100 --producers 1 --consumers 4 --system rabbitmq
+python main.py --count 100 --producers 1 --consumers 4 --system kafka
 
-python main.py --count 50 --size 4096 --only baseline
-python main.py --count 50 --size 4096 --only rabbitmq
-python main.py --count 50 --size 4096 --only kafka
+# Teste com 1000 mensagens
+python main.py --count 1000 --producers 4 --consumers 4 --system rabbitmq
+python main.py --count 1000 --producers 4 --consumers 4 --system kafka
 
-# Teste 8.2: Performance com diferentes cargas
-echo "=== TESTE 8.2: Performance - Cargas Variadas ==="
-python main.py --count 100 --size 100 --only baseline
-python main.py --count 100 --size 100 --only rabbitmq
-python main.py --count 100 --size 100 --only kafka
+# Teste com 10000 mensagens
+python main.py --count 10000 --producers 16 --consumers 64 --system rabbitmq
+python main.py --count 10000 --producers 16 --consumers 64 --system kafka
 
-python main.py --count 500 --size 100 --only baseline
-python main.py --count 500 --size 100 --only rabbitmq
-python main.py --count 500 --size 100 --only kafka
+# Teste com 100000 mensagens
+python main.py --count 100000 --producers 64 --consumers 64 --system rabbitmq
+python main.py --count 100000 --producers 64 --consumers 64 --system kafka
+
+# Teste 8.2: Performance com diferentes números de produtores
+echo "=== TESTE 8.2: Performance - Produtores Variados ==="
+python main.py --count 1000 --producers 1 --consumers 4 --system rabbitmq
+python main.py --count 1000 --producers 4 --consumers 4 --system rabbitmq
+python main.py --count 1000 --producers 16 --consumers 64 --system rabbitmq
+python main.py --count 1000 --producers 64 --consumers 64 --system rabbitmq
 ```
 
 **✅ Critério de Sucesso**: Dados suficientes para análise estatística.
@@ -490,47 +564,59 @@ echo "🧪 Executando Teste 1: Validação Básica"
 # Baseline com servidor
 python main.py --server --port 5000 &
 sleep 3
-python main.py --count 10 --size 200 --only baseline
+python main.py --count 100 --producers 1 --consumers 4 --system baseline
 pkill -f "python main.py --server"
 # RabbitMQ e Kafka
-python main.py --count 8 --size 150 --only rabbitmq
-python main.py --count 8 --size 150 --only kafka
+python main.py --count 100 --producers 1 --consumers 4 --system rabbitmq
+python main.py --count 100 --producers 1 --consumers 4 --system kafka
 
 echo "🧪 Executando Teste 2: Rate Limiting"
-python main.py --count 8 --size 100 --rps 3 --only baseline
-python main.py --count 6 --size 100 --rps 2 --only rabbitmq
-python main.py --count 6 --size 100 --rps 2 --only kafka
+python main.py --server --port 5000 &
+sleep 3
+python main.py --count 100 --producers 1 --consumers 4 --system baseline --rps 10
+pkill -f "python main.py --server"
+python main.py --count 100 --producers 4 --consumers 4 --system rabbitmq --rps 20
+python main.py --count 100 --producers 4 --consumers 4 --system kafka --rps 20
 
 echo "🧪 Executando Teste 3: Múltiplos Clientes"
-python main.py --count 12 --size 100 --producers 3 --consumers 2 --only baseline
-python main.py --count 8 --size 100 --producers 2 --consumers 2 --only rabbitmq
-python main.py --count 8 --size 100 --producers 2 --consumers 2 --only kafka
+python main.py --server --port 5000 &
+sleep 3
+python main.py --count 1000 --producers 16 --consumers 4 --system baseline
+pkill -f "python main.py --server"
+python main.py --count 1000 --producers 16 --consumers 64 --system rabbitmq
+python main.py --count 1000 --producers 16 --consumers 64 --system kafka
 
 echo "🧪 Executando Teste 4: Chaos Engineering"
-python main.py --chaos --count 5 --size 100 --only rabbitmq
+python main.py --chaos --count 100 --producers 1 --consumers 4 --system rabbitmq
 sleep 30
-python main.py --chaos --count 5 --size 100 --only kafka
+python main.py --chaos --count 100 --producers 1 --consumers 4 --system kafka
 sleep 30
 
 echo "🧪 Executando Teste 5: Monitoramento"
-python main.py --count 5 --size 100 --only rabbitmq
-python main.py --count 5 --size 100 --only kafka
+python main.py --count 100 --producers 1 --consumers 4 --system rabbitmq
+python main.py --count 100 --producers 1 --consumers 4 --system kafka
 
 echo "🧪 Executando Teste 6: Benchmarks Integrados"
-python main.py --count 10 --size 100
-python main.py --count 20 --size 100 --rps 5
-python main.py --count 30 --size 100 --producers 3 --consumers 2
+python main.py --count 1000 --producers 4 --consumers 4 --system rabbitmq
+python main.py --count 1000 --producers 4 --consumers 4 --system kafka
+python main.py --server --port 5000 &
+sleep 3
+python main.py --count 1000 --producers 4 --consumers 4 --system baseline
+pkill -f "python main.py --server"
 
 echo "🧪 Executando Teste 7: Baseline HTTP"
 python main.py --server --port 5000 &
 sleep 5
-python main.py --count 15 --size 100 --only baseline
+python main.py --count 100 --producers 1 --consumers 4 --system baseline
 pkill -f "python main.py --server"
 
 echo "🧪 Executando Teste 8: Performance Comparativa"
-python main.py --count 100 --size 100 --only baseline
-python main.py --count 100 --size 100 --only rabbitmq
-python main.py --count 100 --size 100 --only kafka
+python main.py --count 1000 --producers 4 --consumers 4 --system rabbitmq
+python main.py --count 1000 --producers 4 --consumers 4 --system kafka
+python main.py --server --port 5000 &
+sleep 3
+python main.py --count 1000 --producers 4 --consumers 4 --system baseline
+pkill -f "python main.py --server"
 
 echo "✅ TODOS OS TESTES CONCLUÍDOS COM SUCESSO!"
 echo "📊 Verifique os resultados em: logs/"
@@ -575,7 +661,9 @@ logs/
 #### 1. Visualização dos Resultados Consolidados
 ```bash
 # Ver resultados consolidados de cada broker
+# O arquivo benchmark_results.csv contém todas as execuções com as métricas T e V
 echo "=== RESULTADOS BASELINE ==="
+echo "Colunas: timestamp, tech, messages, message_size, num_producers, num_consumers, rps, latency_avg (T), latency_50, latency_95, latency_99, throughput (V), successful_producers, successful_consumers"
 cat logs/baseline/benchmark_results.csv
 
 echo "=== RESULTADOS RABBITMQ ==="
@@ -585,30 +673,51 @@ echo "=== RESULTADOS KAFKA ==="
 cat logs/kafka/benchmark_results.csv
 ```
 
-#### 2. Análise de Latência
+#### 2. Análise de Latência (T - Tempo de Permanência na Fila)
 ```bash
 # Analisar latências mais recentes
-echo "=== LATÊNCIAS BASELINE ==="
-ls -la logs/baseline/*latency.csv | tail -1 | xargs cat
+# Cada arquivo contém: msg_id, latency_seconds (T)
+echo "=== LATÊNCIAS BASELINE (T) ==="
+ls -la logs/baseline/*latency.csv | tail -1 | xargs cat | head -20
 
-echo "=== LATÊNCIAS RABBITMQ ==="
-ls -la logs/rabbitmq/*latency.csv | tail -1 | xargs cat
+echo "=== LATÊNCIAS RABBITMQ (T) ==="
+ls -la logs/rabbitmq/*latency.csv | tail -1 | xargs cat | head -20
 
-echo "=== LATÊNCIAS KAFKA ==="
-ls -la logs/kafka/*latency.csv | tail -1 | xargs cat
+echo "=== LATÊNCIAS KAFKA (T) ==="
+ls -la logs/kafka/*latency.csv | tail -1 | xargs cat | head -20
+
+# Calcular estatísticas de latência
+echo "=== ESTATÍSTICAS DE LATÊNCIA ==="
+for system in baseline rabbitmq kafka; do
+    echo "--- $system ---"
+    latest=$(ls -la logs/$system/*latency.csv 2>/dev/null | tail -1 | awk '{print $NF}')
+    if [ -n "$latest" ]; then
+        awk -F',' 'NR>1 {sum+=$2; count++; if(count==1 || $2<min) min=$2; if($2>max) max=$2} END {if(count>0) print "Média (T): " sum/count "s | Min: " min "s | Max: " max "s | Total: " count}' "$latest"
+    fi
+done
 ```
 
-#### 3. Análise de Throughput
+#### 3. Análise de Throughput (V - Vazão)
 ```bash
-# Extrair throughput dos summaries
-echo "=== THROUGHPUT BASELINE ==="
-ls -la logs/baseline/*summary.csv | tail -1 | xargs grep "throughput"
+# Extrair throughput dos summaries e dos resultados consolidados
+# V (Throughput) = mensagens por segundo
+echo "=== THROUGHPUT BASELINE (V) ==="
+ls -la logs/baseline/*summary.csv | tail -1 | xargs grep "throughput_msgs_per_sec"
 
-echo "=== THROUGHPUT RABBITMQ ==="
-ls -la logs/rabbitmq/*summary.csv | tail -1 | xargs grep "throughput"
+echo "=== THROUGHPUT RABBITMQ (V) ==="
+ls -la logs/rabbitmq/*summary.csv | tail -1 | xargs grep "throughput_msgs_per_sec"
 
-echo "=== THROUGHPUT KAFKA ==="
-ls -la logs/kafka/*summary.csv | tail -1 | xargs grep "throughput"
+echo "=== THROUGHPUT KAFKA (V) ==="
+ls -la logs/kafka/*summary.csv | tail -1 | xargs grep "throughput_msgs_per_sec"
+
+# Extrair throughput dos resultados consolidados (última linha)
+echo "=== THROUGHPUT DOS RESULTADOS CONSOLIDADOS ==="
+for system in baseline rabbitmq kafka; do
+    echo "--- $system ---"
+    if [ -f "logs/$system/benchmark_results.csv" ]; then
+        tail -1 "logs/$system/benchmark_results.csv" | awk -F',' '{print "Throughput (V): " $12 " mensagens/segundo"}'
+    fi
+done
 ```
 
 #### 4. Monitoramento de Recursos
@@ -693,15 +802,24 @@ python visualizar_resultados.py
 
 ### Métricas Principais
 
-#### 1. **Throughput (Mensagens/segundo)**
-- **Baseline HTTP**: Esperado 50-200 msgs/s
-- **RabbitMQ**: Esperado 1,000-5,000 msgs/s
-- **Apache Kafka**: Esperado 5,000-20,000 msgs/s
+#### 1. **T (Tempo de Permanência na Fila) - Latência**
+- **Definição**: Tempo médio que uma mensagem permanece na fila desde o envio até o processamento
+- **Unidade**: Segundos (com precisão de microssegundos)
+- **Valores Esperados**:
+  - **Baseline HTTP**: 0.001-0.010s
+  - **RabbitMQ**: 0.001-0.005s
+  - **Apache Kafka**: 0.001-0.003s
+- **Arquivo**: `logs/<system>/*_latency.csv` (coluna `latency_seconds`)
 
-#### 2. **Latência (Segundos)**
-- **Baseline HTTP**: Esperado 0.001-0.010s
-- **RabbitMQ**: Esperado 0.001-0.005s
-- **Apache Kafka**: Esperado 0.001-0.003s
+#### 2. **V (Throughput / Vazão)**
+- **Definição**: Número de mensagens processadas por unidade de tempo
+- **Unidade**: Mensagens por segundo
+- **Cálculo**: `V = mensagens_processadas / duração_total`
+- **Valores Esperados**:
+  - **Baseline HTTP**: 50-200 msgs/s
+  - **RabbitMQ**: 1,000-5,000 msgs/s
+  - **Apache Kafka**: 5,000-20,000 msgs/s
+- **Arquivo**: `logs/<system>/*_summary.csv` (métrica `throughput_msgs_per_sec`) e `benchmark_results.csv` (coluna `throughput`)
 
 #### 3. **Taxa de Sucesso (%)**
 - **Todos os brokers**: Esperado 95-100%
@@ -712,46 +830,55 @@ python visualizar_resultados.py
 
 ### Análise Comparativa
 
-#### Cenário 1: Mensagens Pequenas (100 bytes)
+#### Cenário 1: Teste com 100 Mensagens
 ```bash
 # Executar teste específico
-python main.py --count 100 --size 100 --only baseline
-python main.py --count 100 --size 100 --only rabbitmq
-python main.py --count 100 --size 100 --only kafka
+python main.py --server --port 5000 &
+sleep 3
+python main.py --count 100 --producers 1 --consumers 4 --system baseline
+python main.py --count 100 --producers 1 --consumers 4 --system rabbitmq
+python main.py --count 100 --producers 1 --consumers 4 --system kafka
+pkill -f "python main.py --server"
 
 # Analisar resultados
-echo "=== COMPARAÇÃO - MENSAGENS PEQUENAS ==="
-echo "Baseline: $(tail -1 logs/baseline/benchmark_results.csv | cut -d',' -f3) msgs/s"
-echo "RabbitMQ: $(tail -1 logs/rabbitmq/benchmark_results.csv | cut -d',' -f3) msgs/s"
-echo "Kafka:    $(tail -1 logs/kafka/benchmark_results.csv | cut -d',' -f3) msgs/s"
+echo "=== COMPARAÇÃO - 100 MENSAGENS ==="
+echo "Baseline - T (Latência): $(tail -1 logs/baseline/benchmark_results.csv | cut -d',' -f8) segundos | V (Throughput): $(tail -1 logs/baseline/benchmark_results.csv | cut -d',' -f12) msgs/s"
+echo "RabbitMQ - T (Latência): $(tail -1 logs/rabbitmq/benchmark_results.csv | cut -d',' -f8) segundos | V (Throughput): $(tail -1 logs/rabbitmq/benchmark_results.csv | cut -d',' -f12) msgs/s"
+echo "Kafka    - T (Latência): $(tail -1 logs/kafka/benchmark_results.csv | cut -d',' -f8) segundos | V (Throughput): $(tail -1 logs/kafka/benchmark_results.csv | cut -d',' -f12) msgs/s"
 ```
 
-#### Cenário 2: Mensagens Grandes (4KB)
+#### Cenário 2: Teste com 10.000 Mensagens e Múltiplos Produtores
 ```bash
 # Executar teste específico
-python main.py --count 50 --size 4096 --only baseline
-python main.py --count 50 --size 4096 --only rabbitmq
-python main.py --count 50 --size 4096 --only kafka
+python main.py --server --port 5000 &
+sleep 3
+python main.py --count 10000 --producers 16 --consumers 64 --system baseline
+python main.py --count 10000 --producers 16 --consumers 64 --system rabbitmq
+python main.py --count 10000 --producers 16 --consumers 64 --system kafka
+pkill -f "python main.py --server"
 
 # Analisar resultados
-echo "=== COMPARAÇÃO - MENSAGENS GRANDES ==="
-echo "Baseline: $(tail -1 logs/baseline/benchmark_results.csv | cut -d',' -f3) msgs/s"
-echo "RabbitMQ: $(tail -1 logs/rabbitmq/benchmark_results.csv | cut -d',' -f3) msgs/s"
-echo "Kafka:    $(tail -1 logs/kafka/benchmark_results.csv | cut -d',' -f3) msgs/s"
+echo "=== COMPARAÇÃO - 10.000 MENSAGENS, 16 PRODUTORES, 64 CONSUMIDORES ==="
+echo "Baseline - T (Latência): $(tail -1 logs/baseline/benchmark_results.csv | cut -d',' -f8) segundos | V (Throughput): $(tail -1 logs/baseline/benchmark_results.csv | cut -d',' -f12) msgs/s"
+echo "RabbitMQ - T (Latência): $(tail -1 logs/rabbitmq/benchmark_results.csv | cut -d',' -f8) segundos | V (Throughput): $(tail -1 logs/rabbitmq/benchmark_results.csv | cut -d',' -f12) msgs/s"
+echo "Kafka    - T (Latência): $(tail -1 logs/kafka/benchmark_results.csv | cut -d',' -f8) segundos | V (Throughput): $(tail -1 logs/kafka/benchmark_results.csv | cut -d',' -f12) msgs/s"
 ```
 
-#### Cenário 3: Rate Limiting
+#### Cenário 3: Teste com Rate Limiting
 ```bash
 # Executar teste com rate limiting
-python main.py --count 20 --size 100 --rps 5 --only baseline
-python main.py --count 20 --size 100 --rps 5 --only rabbitmq
-python main.py --count 20 --size 100 --rps 5 --only kafka
+python main.py --server --port 5000 &
+sleep 3
+python main.py --count 1000 --producers 4 --consumers 4 --system baseline --rps 50
+python main.py --count 1000 --producers 4 --consumers 4 --system rabbitmq --rps 50
+python main.py --count 1000 --producers 4 --consumers 4 --system kafka --rps 50
+pkill -f "python main.py --server"
 
 # Verificar se rate limiting funcionou
 echo "=== VERIFICAÇÃO RATE LIMITING ==="
-echo "Baseline: $(tail -1 logs/baseline/benchmark_results.csv | cut -d',' -f3) msgs/s (esperado ~5)"
-echo "RabbitMQ: $(tail -1 logs/rabbitmq/benchmark_results.csv | cut -d',' -f3) msgs/s (esperado ~5)"
-echo "Kafka:    $(tail -1 logs/kafka/benchmark_results.csv | cut -d',' -f3) msgs/s (esperado ~5)"
+echo "Baseline - V (Throughput): $(tail -1 logs/baseline/benchmark_results.csv | cut -d',' -f12) msgs/s (esperado ~50)"
+echo "RabbitMQ - V (Throughput): $(tail -1 logs/rabbitmq/benchmark_results.csv | cut -d',' -f12) msgs/s (esperado ~50)"
+echo "Kafka    - V (Throughput): $(tail -1 logs/kafka/benchmark_results.csv | cut -d',' -f12) msgs/s (esperado ~50)"
 ```
 
 ### Relatório de Análise
@@ -787,11 +914,12 @@ def gerar_relatorio():
             
             # Estatísticas básicas
             print(f"Total de testes: {len(data)}")
-            print(f"Throughput médio: {data['throughput'].mean():.2f} msgs/s")
-            print(f"Latência média: {data['avg_latency'].mean():.6f}s")
-            print(f"Taxa de sucesso média: {data['success_rate'].mean():.2f}%")
-            print(f"Throughput máximo: {data['throughput'].max():.2f} msgs/s")
-            print(f"Throughput mínimo: {data['throughput'].min():.2f} msgs/s")
+            print(f"V (Throughput médio): {data['throughput'].mean():.2f} mensagens/segundo")
+            print(f"T (Latência média): {data['latency_avg'].mean():.6f} segundos")
+            print(f"Throughput máximo (V): {data['throughput'].max():.2f} msgs/s")
+            print(f"Throughput mínimo (V): {data['throughput'].min():.2f} msgs/s")
+            print(f"Latência mínima (T): {data['latency_avg'].min():.6f}s")
+            print(f"Latência máxima (T): {data['latency_avg'].max():.6f}s")
             
         except FileNotFoundError:
             print(f"❌ Dados não encontrados para {broker}")
@@ -807,12 +935,15 @@ def gerar_relatorio():
         rabbitmq_data = pd.read_csv('logs/rabbitmq/benchmark_results.csv')
         kafka_data = pd.read_csv('logs/kafka/benchmark_results.csv')
         
-        print(f"Baseline - Throughput médio: {baseline_data['throughput'].mean():.2f} msgs/s")
-        print(f"RabbitMQ - Throughput médio: {rabbitmq_data['throughput'].mean():.2f} msgs/s")
-        print(f"Kafka    - Throughput médio: {kafka_data['throughput'].mean():.2f} msgs/s")
+        print(f"Baseline - V (Throughput médio): {baseline_data['throughput'].mean():.2f} mensagens/segundo")
+        print(f"Baseline - T (Latência média): {baseline_data['latency_avg'].mean():.6f} segundos")
+        print(f"RabbitMQ - V (Throughput médio): {rabbitmq_data['throughput'].mean():.2f} mensagens/segundo")
+        print(f"RabbitMQ - T (Latência média): {rabbitmq_data['latency_avg'].mean():.6f} segundos")
+        print(f"Kafka    - V (Throughput médio): {kafka_data['throughput'].mean():.2f} mensagens/segundo")
+        print(f"Kafka    - T (Latência média): {kafka_data['latency_avg'].mean():.6f} segundos")
         
         print()
-        print("🏆 RANKING DE PERFORMANCE:")
+        print("🏆 RANKING DE PERFORMANCE - THROUGHPUT (V):")
         throughputs = {
             'Baseline': baseline_data['throughput'].mean(),
             'RabbitMQ': rabbitmq_data['throughput'].mean(),
@@ -821,7 +952,19 @@ def gerar_relatorio():
         
         ranking = sorted(throughputs.items(), key=lambda x: x[1], reverse=True)
         for i, (broker, throughput) in enumerate(ranking, 1):
-            print(f"{i}º lugar: {broker} - {throughput:.2f} msgs/s")
+            print(f"{i}º lugar: {broker} - {throughput:.2f} mensagens/segundo")
+        
+        print()
+        print("🏆 RANKING DE PERFORMANCE - LATÊNCIA (T) - Menor é melhor:")
+        latencies = {
+            'Baseline': baseline_data['latency_avg'].mean(),
+            'RabbitMQ': rabbitmq_data['latency_avg'].mean(),
+            'Kafka': kafka_data['latency_avg'].mean()
+        }
+        
+        ranking_lat = sorted(latencies.items(), key=lambda x: x[1])
+        for i, (broker, latency) in enumerate(ranking_lat, 1):
+            print(f"{i}º lugar: {broker} - {latency:.6f} segundos")
             
     except FileNotFoundError as e:
         print(f"❌ Erro ao carregar dados: {e}")

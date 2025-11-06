@@ -66,6 +66,17 @@ class BaseBroker(ABC):
 
     def save_metrics(self, additional_metrics: Dict[str, Any] = None):
         """Salva todas as métricas coletadas."""
-        self.metrics.save_send_times()
-        self.metrics.save_latencies()
+        # Só salvar send_times se houver dados
+        if self.metrics.send_times:
+            self.metrics.save_send_times()
+        else:
+            self.logger.debug("Nenhum send_time para salvar")
+            
+        # Só salvar latências se houver dados
+        if self.metrics.latencies:
+            self.metrics.save_latencies()
+        else:
+            self.logger.debug("Nenhuma latência para salvar")
+            
+        # Sempre salvar summary (pode ter informações mesmo sem latências)
         self.metrics.save_summary(additional_metrics)
