@@ -97,6 +97,7 @@ def monitor_docker_resources(monitoring_event, output_file, interval=1.0):
         writer.writerow(['timestamp', 'container_name', 'container_id', 'cpu_percent', 'memory_usage'])
     
     sample_count = 0
+
     while not monitoring_event.is_set():
         try:
             timestamp = datetime.now().strftime('%Y-%m-%d %H:%M:%S.%f')[:-3]
