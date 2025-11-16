@@ -28,8 +28,8 @@ class RabbitMQConsumer(BaseBroker):
     def _load_send_times(self):
         """Carrega os tempos de envio do arquivo mais recente"""
         # Tentar múltiplas vezes se o arquivo não existir (produtores podem estar salvando)
-        max_retries = 10
-        retry_delay = 0.5  # 500ms
+        max_retries = 20  # Aumentar tentativas
+        retry_delay = 1.0  # Aumentar delay para 1 segundo
         
         for attempt in range(max_retries):
             try:

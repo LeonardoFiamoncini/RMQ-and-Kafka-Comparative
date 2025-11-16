@@ -1,17 +1,51 @@
-# Ambientes virtuais
-venv/
-*/venv/
-
-# Ignorar arquivos de cache do Python
+# Python
 __pycache__/
-*.pyc
-*.pyo
 *.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+MANIFEST
 
-# Logs
-*.log
-logs/*
+# Virtual Environment
+venv/
+env/
+ENV/
 
-# Configuração de IDEs
+# IDE
 .vscode/
 .idea/
+*.swp
+*.swo
+*~
+
+# Logs
+logs/
+*.log
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Docker
+.dockerignore
+
+# Project specific
+*.csv
+*.json
+!requirements.txt
+!config/*.properties

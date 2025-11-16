@@ -90,7 +90,7 @@ class KafkaProducerBroker(BaseBroker):
             return False
 
     def send_messages(
-        self, count: int, message_size: int, rps: Optional[int] = None
+        self, count: int, message_size: int, rps: Optional[int] = None, id_offset: int = 0
     ) -> bool:
         """
         Envia mensagens para o Kafka.
@@ -134,7 +134,8 @@ class KafkaProducerBroker(BaseBroker):
                 )
 
             for i in range(count):
-                msg_id = str(i)
+                # Usar offset para garantir IDs únicos entre múltiplos produtores
+                msg_id = str(id_offset + i)
                 payload = {"id": msg_id, "body": message_content}
 
                 # Enviar mensagem e aguardar confirmação

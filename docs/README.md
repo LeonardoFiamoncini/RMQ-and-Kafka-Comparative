@@ -26,9 +26,33 @@ Este projeto implementa um sistema completo de benchmark comparativo entre **Rab
 - **Escalabilidade**: Teste de comportamento com múltiplos clientes concorrentes
 - **Reprodutibilidade**: Metodologia científica rigorosa para replicação dos resultados
 
+### 🔬 Garantia de Reprodutibilidade Total
+
+Este projeto foi desenvolvido com **foco total em reprodutibilidade científica**, garantindo que os resultados possam ser replicados em **qualquer hardware e sistema operacional**:
+
+✅ **Versões Fixas e Obrigatórias**:
+- RabbitMQ: `4.1.1` (imagem: `rabbitmq:4.1.1-management`)
+- Apache Kafka: `4.0.0` (imagem: `apache/kafka:4.0.0`)
+- Python: `3.12+` (com versões fixas em `requirements.txt`)
+
+✅ **Configurações Padronizadas**:
+- Arquivo `docker-compose.yml` com versões fixas
+- Configuração KRaft em `config/kraft-server.properties`
+- Cluster IDs fixos para consistência
+
+✅ **Ambiente Containerizado**:
+- Docker e Docker Compose para isolamento completo
+- Scripts de setup automatizados (`scripts/setup_dev_environment.sh`)
+- Compatibilidade multi-plataforma (Linux, macOS, Windows/WSL2)
+
+✅ **Documentação Completa**:
+- Instruções detalhadas para cada sistema operacional
+- Troubleshooting para problemas comuns
+- Exemplos de execução e análise
+
 ### Tecnologias Implementadas
 - **RabbitMQ 4.1.1** (imagem: `rabbitmq:4.1.1-management`): Com Quorum Queues e cluster de 3 nós
-- **Apache Kafka 4.0** (imagem: `bitnami/kafka:3.6`): Com KRaft mode e Queue Mode (KIP-932)
+- **Apache Kafka 4.0** (imagem: `apache/kafka:4.0.0`): Com KRaft mode e Queue Mode (KIP-932)
 - **HTTP Síncrono**: Baseline para comparação de latência (Flask)
 - **Docker**: Containerização completa da infraestrutura
 - **Python 3.12+**: Implementação dos clientes e orquestração
@@ -1171,11 +1195,11 @@ main.py → BenchmarkOrchestrator → Broker Classes → Metrics Collection → 
 - **Configurações**: Confirmação de entrega, mensagens persistentes
 
 #### Apache Kafka
-- **Versão**: 4.0 (imagem Docker: `bitnami/kafka:3.6`)
+- **Versão**: 4.0 (imagem Docker: `apache/kafka:4.0.0`)
 - **Modo**: KRaft (sem Zookeeper)
 - **Queue Mode**: Simulação de KIP-932
 - **Portas**: 9092 (Broker), 9000 (Kafdrop)
-- **Nota**: A tag `3.6` do Bitnami garante reprodutibilidade e suporta KRaft. A numeração do Bitnami não corresponde exatamente à versão do Kafka. Para Kafka 4.0 exato, verifique tags disponíveis em: https://hub.docker.com/r/bitnami/kafka/tags
+- **Nota**: A imagem oficial do Apache Kafka 4.0 é usada com configuração KRaft personalizada. O arquivo de configuração está em `config/kraft-server.properties`.
 
 #### Baseline HTTP
 - **Framework**: Flask

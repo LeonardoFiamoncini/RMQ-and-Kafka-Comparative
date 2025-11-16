@@ -110,25 +110,51 @@ class MetricsCollector:
         """Salva resultados do benchmark em CSV consolidado."""
         file_path = self.metrics_dir / "benchmark_results.csv"
 
-        # Calcular métricas
-        duration = (
-            (self.end_time - self.start_time)
-            if self.start_time and self.end_time
-            else 0
-        )
-        latencies = [lat for _, lat in self.latencies]
-
-        if latencies:
-            latencies.sort()
-            n = len(latencies)
-            latency_50 = latencies[int(n * 0.5)]
-            latency_95 = latencies[int(n * 0.95)]
-            latency_99 = latencies[int(n * 0.99)]
-            latency_avg = sum(latencies) / n
+        # Usar valores passados no config se disponíveis (valores calculados pelo orchestrator)
+        # Caso contrário, calcular a partir das latências coletadas
+        if "avg_latency" in config and "throughput" in config:
+            # Usar valores já calculados pelo orchestrator
+            latency_avg = config.get("avg_latency", 0)
+            throughput = config.get("throughput", 0)
+            duration = config.get("duration", 0)
+            
+            # Usar percentis passados no config se disponíveis
+            if "latency_50" in config and "latency_95" in config and "latency_99" in config:
+                latency_50 = config.get("latency_50", latency_avg)
+                latency_95 = config.get("latency_95", latency_avg)
+                latency_99 = config.get("latency_99", latency_avg)
+            else:
+                # Calcular percentis se tivermos latências coletadas
+                latencies = [lat for _, lat in self.latencies]
+                if latencies:
+                    latencies.sort()
+                    n = len(latencies)
+                    latency_50 = latencies[int(n * 0.5)] if n > 0 else 0
+                    latency_95 = latencies[int(n * 0.95)] if n > 0 else 0
+                    latency_99 = latencies[int(n * 0.99)] if n > 0 else 0
+                else:
+                    # Se não temos latências coletadas, usar avg_latency para todos os percentis
+                    latency_50 = latency_95 = latency_99 = latency_avg
         else:
-            latency_50 = latency_95 = latency_99 = latency_avg = 0
+            # Calcular métricas a partir das latências coletadas (comportamento antigo)
+            duration = (
+                (self.end_time - self.start_time)
+                if self.start_time and self.end_time
+                else 0
+            )
+            latencies = [lat for _, lat in self.latencies]
 
-        throughput = len(self.latencies) / duration if duration > 0 else 0
+            if latencies:
+                latencies.sort()
+                n = len(latencies)
+                latency_50 = latencies[int(n * 0.5)]
+                latency_95 = latencies[int(n * 0.95)]
+                latency_99 = latencies[int(n * 0.99)]
+                latency_avg = sum(latencies) / n
+            else:
+                latency_50 = latency_95 = latency_99 = latency_avg = 0
+
+            throughput = len(self.latencies) / duration if duration > 0 else 0
 
         # Verificar se arquivo existe para decidir se escreve cabeçalho
         write_header = not file_path.exists()

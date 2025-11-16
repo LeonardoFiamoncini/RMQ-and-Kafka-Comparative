@@ -34,22 +34,28 @@ class BenchmarkOrchestrator:
         messages_per_producer: int,
         message_size: int,
         rps: Optional[int] = None,
+        total_messages: int = 0,  # Total de mensagens para calcular offset
     ) -> Dict[str, Any]:
         """Executa um processo produtor individual"""
         try:
+            # Calcular offset baseado no producer_id para garantir IDs únicos
+            # Cada produtor envia mensagens com IDs: producer_id * messages_per_producer + i
+            # Exemplo: producer 0 envia 0-24, producer 1 envia 25-49, etc.
+            id_offset = producer_id * messages_per_producer
+            
             if tech == "kafka":
                 producer = KafkaProd()
                 success = producer.send_messages(
-                    messages_per_producer, message_size, rps
+                    messages_per_producer, message_size, rps, id_offset=id_offset
                 )
             elif tech == "rabbitmq":
                 producer = RabbitMQProd()
                 success = producer.send_messages(
-                    messages_per_producer, message_size, rps
+                    messages_per_producer, message_size, rps, id_offset=id_offset
                 )
             elif tech == "baseline":
                 client = BaselineClient()
-                success = client.send_messages(messages_per_producer, message_size, rps)
+                success = client.send_messages(messages_per_producer, message_size, rps, id_offset=id_offset)
             else:
                 return {"success": False, "error": f"Tecnologia {tech} não suportada"}
 
@@ -139,7 +145,7 @@ class BenchmarkOrchestrator:
         self.logger.info(f"   • Iniciando {num_producers} produtor(es)...")
         with Pool(processes=num_producers) as pool:
             producer_args = [
-                (tech, i, messages_per_producer, size, rps)
+                (tech, i, messages_per_producer, size, rps, count)
                 for i in range(num_producers)
             ]
             producer_results = pool.starmap(self.run_producer_process, producer_args)
@@ -147,7 +153,16 @@ class BenchmarkOrchestrator:
         # CRÍTICO: Aguardar produtores terminarem e salvarem send_times ANTES de consumidores processarem
         # Aguardar um pouco mais para garantir que TODOS os arquivos send_times foram salvos
         self.logger.info("   • Aguardando produtores salvarem métricas...")
-        time.sleep(5)  # Aumentar tempo de espera para garantir que arquivos foram salvos
+        time.sleep(10)  # Aumentar tempo de espera para garantir que arquivos foram salvos
+        
+        # Verificar se os arquivos send_times foram criados
+        from ..core.config import LOGS_DIR
+        metrics_dir = LOGS_DIR / tech
+        send_times_files = list(metrics_dir.glob("*_send_times.json"))
+        if send_times_files:
+            self.logger.info(f"   • {len(send_times_files)} arquivo(s) send_times encontrado(s)")
+        else:
+            self.logger.warning("   • ⚠️ Nenhum arquivo send_times encontrado ainda")
         
         # Aguardar consumidores terminarem (com timeout)
         if tech != "baseline":
@@ -221,6 +236,15 @@ class BenchmarkOrchestrator:
                 total_latencies = unique_latencies
                 messages_processed = len(total_latencies)
                 avg_latency = sum(total_latencies) / len(total_latencies) if total_latencies else 0
+                
+                # Calcular percentis de latência
+                sorted_latencies = sorted(total_latencies)
+                n = len(sorted_latencies)
+                latency_50 = sorted_latencies[int(n * 0.5)] if n > 0 else 0
+                latency_95 = sorted_latencies[int(n * 0.95)] if n > 0 else 0
+                latency_99 = sorted_latencies[int(n * 0.99)] if n > 0 else 0
+            else:
+                latency_50 = latency_95 = latency_99 = 0
         
         # Para baseline, também pode ter latências ou usar tempo de processamento
         if tech == "baseline" and not total_latencies:
@@ -241,6 +265,10 @@ class BenchmarkOrchestrator:
         
         # Calcular throughput (V): mensagens processadas por segundo
         throughput = messages_processed / duration if duration > 0 else 0
+        
+        # Inicializar percentis se não foram calculados
+        if 'latency_50' not in locals():
+            latency_50 = latency_95 = latency_99 = avg_latency
 
         results = {
             "tech": tech,
@@ -252,6 +280,9 @@ class BenchmarkOrchestrator:
             "successful_consumers": successful_consumers,
             "avg_latency": avg_latency,  # T: Tempo de permanência na fila
             "throughput": throughput,    # V: Throughput (mensagens/segundo)
+            "latency_50": latency_50,
+            "latency_95": latency_95,
+            "latency_99": latency_99,
             "producer_results": producer_results,
             "consumer_results": consumer_results,
         }
@@ -268,6 +299,13 @@ class BenchmarkOrchestrator:
                 "rps": rps,
                 "successful_producers": successful_producers,
                 "successful_consumers": successful_consumers,
+                "avg_latency": avg_latency,  # Passar latência calculada
+                "throughput": throughput,    # Passar throughput calculado
+                "duration": duration,         # Passar duração calculada
+                "messages_processed": messages_processed,  # Passar mensagens processadas
+                "latency_50": latency_50,
+                "latency_95": latency_95,
+                "latency_99": latency_99,
             },
         )
 
