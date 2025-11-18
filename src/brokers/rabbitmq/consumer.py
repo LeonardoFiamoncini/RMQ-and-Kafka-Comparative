@@ -41,48 +41,54 @@ class RabbitMQConsumer(BaseBroker):
                 if send_times_files:
                     # Ordenar por mtime (mais recente primeiro)
                     send_times_files.sort(key=os.path.getmtime, reverse=True)
-                
-                # Consolidar todos os arquivos send_times (de múltiplos produtores)
-                consolidated_send_times = {}
-                for file_path in send_times_files:
-                    try:
-                        with open(file_path, "r") as f:
-                            content = f.read().strip()
-                            # Tentar corrigir JSON malformado (pode ter múltiplos objetos)
-                            # Se começar com {}{, significa que há múltiplos objetos JSON
-                            if content.startswith('{}{'):
-                                # Pegar o último objeto JSON válido (o mais completo)
-                                # Procurar por todos os pares de chaves
-                                brace_count = 0
-                                last_brace = -1
-                                start_brace = -1
-                                for i, char in enumerate(content):
-                                    if char == '{':
-                                        if brace_count == 0:
-                                            start_brace = i
-                                        brace_count += 1
-                                    elif char == '}':
-                                        brace_count -= 1
-                                        if brace_count == 0:
-                                            last_brace = i
-                                if start_brace >= 0 and last_brace > start_brace:
-                                    content = content[start_brace:last_brace+1]
-                                else:
-                                    # Fallback: pegar o último objeto
-                                    last_brace = content.rfind('}')
-                                    if last_brace > 0:
-                                        content = content[content.rfind('{', 0, last_brace):last_brace+1]
-                            # Parsear JSON
-                            file_data = json.loads(content)
-                            # Fazer merge (arquivos mais recentes sobrescrevem)
-                            if isinstance(file_data, dict):
-                                consolidated_send_times.update(file_data)
-                    except (json.JSONDecodeError, ValueError) as e:
-                        self.logger.warning(f"Erro ao fazer parse do JSON em {file_path}: {e}")
-                        continue
-                
+
+                    # Consolidar todos os arquivos send_times (de múltiplos produtores)
+                    consolidated_send_times = {}
+                    for file_path in send_times_files:
+                        try:
+                            with open(file_path, "r") as f:
+                                content = f.read().strip()
+                                # Tentar corrigir JSON malformado (pode ter múltiplos objetos)
+                                # Se começar com {}{, significa que há múltiplos objetos JSON
+                                if content.startswith("{}{"):
+                                    # Pegar o último objeto JSON válido (o mais completo)
+                                    # Procurar por todos os pares de chaves
+                                    brace_count = 0
+                                    last_brace = -1
+                                    start_brace = -1
+                                    for i, char in enumerate(content):
+                                        if char == "{":
+                                            if brace_count == 0:
+                                                start_brace = i
+                                            brace_count += 1
+                                        elif char == "}":
+                                            brace_count -= 1
+                                            if brace_count == 0:
+                                                last_brace = i
+                                    if start_brace >= 0 and last_brace > start_brace:
+                                        content = content[start_brace : last_brace + 1]
+                                    else:
+                                        # Fallback: pegar o último objeto
+                                        last_brace = content.rfind("}")
+                                        if last_brace > 0:
+                                            content = content[
+                                                content.rfind("{", 0, last_brace) : last_brace + 1
+                                            ]
+                                # Parsear JSON
+                                file_data = json.loads(content)
+                                # Fazer merge (arquivos mais recentes sobrescrevem)
+                                if isinstance(file_data, dict):
+                                    consolidated_send_times.update(file_data)
+                        except (json.JSONDecodeError, ValueError) as e:
+                            self.logger.warning(
+                                f"Erro ao fazer parse do JSON em {file_path}: {e}"
+                            )
+                            continue
+
                     self.send_times = consolidated_send_times
-                    self.logger.info(f"Consolidados {len(send_times_files)} arquivos send_times: {len(self.send_times)} timestamps únicos")
+                    self.logger.info(
+                        f"Consolidados {len(send_times_files)} arquivos send_times: {len(self.send_times)} timestamps únicos"
+                    )
                     return  # Sucesso, sair do loop de retry
                 else:
                     # Arquivo não existe ainda, tentar novamente
@@ -90,7 +96,9 @@ class RabbitMQConsumer(BaseBroker):
                         time.sleep(retry_delay)
                         continue
                     else:
-                        self.logger.warning(f"Arquivo de tempos de envio não encontrado após {max_retries} tentativas.")
+                        self.logger.warning(
+                            f"Arquivo de tempos de envio não encontrado após {max_retries} tentativas."
+                        )
                         self.send_times = {}
                         return
             except Exception as e:
@@ -137,14 +145,16 @@ class RabbitMQConsumer(BaseBroker):
                 self.logger.info(
                     f"Mensagem {msg_id} recebida com latência de {latency:.6f} segundos"
                 )
+                # Confirmar processamento bem-sucedido (ack)
+                ch.basic_ack(delivery_tag=method.delivery_tag)
+                self.logger.debug(f"Mensagem {msg_id} confirmada (ack)")
             else:
                 self.logger.warning(
-                    f"Mensagem {msg_id} recebida sem timestamp correspondente (send_times tem {len(self.send_times)} entradas)"
+                    f"Mensagem {msg_id} recebida sem timestamp correspondente (send_times tem {len(self.send_times)} entradas); reenfileirando para aguardar send_times."
                 )
-
-            # Confirmar processamento bem-sucedido (ack)
-            ch.basic_ack(delivery_tag=method.delivery_tag)
-            self.logger.debug(f"Mensagem {msg_id} confirmada (ack)")
+                # Reenfileirar mensagem para ser processada quando send_times estiver disponível
+                ch.basic_nack(delivery_tag=method.delivery_tag, requeue=True)
+                return
 
         except Exception as e:
             self.logger.error(f"Erro ao processar mensagem {msg_id}: {e}")

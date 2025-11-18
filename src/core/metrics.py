@@ -8,9 +8,11 @@ métricas de performance dos benchmarks e experimentos.
 import csv
 import json
 import time
+import uuid
 from datetime import datetime
 from pathlib import Path
-from typing import Dict, List, Any, Optional
+from typing import Any, Dict, List, Optional
+
 from .config import LOGS_DIR
 from .logger import Logger
 
@@ -23,7 +25,8 @@ class MetricsCollector:
         self.tech = tech
         self.experiment_type = experiment_type
         self.logger = Logger.get_logger(f"metrics.{tech}")
-        self.timestamp = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
+        unique_suffix = uuid.uuid4().hex[:6]
+        self.timestamp = f"{datetime.now().strftime('%Y-%m-%d_%H-%M-%S')}_{unique_suffix}"
         self.metrics_dir = LOGS_DIR / tech
         self.metrics_dir.mkdir(parents=True, exist_ok=True)
 

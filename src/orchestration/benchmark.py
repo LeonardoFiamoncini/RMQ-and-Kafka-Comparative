@@ -2,9 +2,10 @@
 Módulo de orquestração de benchmarks
 """
 
+import math
 import time
 from multiprocessing import Pool
-from threading import Thread
+from threading import Event, Thread
 from typing import Any, Dict, Optional
 
 import subprocess
@@ -34,15 +35,11 @@ class BenchmarkOrchestrator:
         messages_per_producer: int,
         message_size: int,
         rps: Optional[int] = None,
-        total_messages: int = 0,  # Total de mensagens para calcular offset
+        total_messages: int = 0,  # Mantido para compatibilidade
+        id_offset: int = 0,
     ) -> Dict[str, Any]:
         """Executa um processo produtor individual"""
         try:
-            # Calcular offset baseado no producer_id para garantir IDs únicos
-            # Cada produtor envia mensagens com IDs: producer_id * messages_per_producer + i
-            # Exemplo: producer 0 envia 0-24, producer 1 envia 25-49, etc.
-            id_offset = producer_id * messages_per_producer
-            
             if tech == "kafka":
                 producer = KafkaProd()
                 success = producer.send_messages(
@@ -55,7 +52,9 @@ class BenchmarkOrchestrator:
                 )
             elif tech == "baseline":
                 client = BaselineClient()
-                success = client.send_messages(messages_per_producer, message_size, rps, id_offset=id_offset)
+                success = client.send_messages(
+                    messages_per_producer, message_size, rps, id_offset=id_offset
+                )
             else:
                 return {"success": False, "error": f"Tecnologia {tech} não suportada"}
 
@@ -69,10 +68,29 @@ class BenchmarkOrchestrator:
             return {"success": False, "producer_id": producer_id, "error": str(e)}
 
     def run_consumer_process(
-        self, tech: str, consumer_id: int, expected_count: int
+        self,
+        tech: str,
+        consumer_id: int,
+        expected_count: int,
+        start_event: Optional[Event] = None,
+        start_timeout: float = 120.0,
     ) -> Dict[str, Any]:
         """Executa um processo consumidor individual"""
         try:
+            if start_event is not None:
+                self.logger.info(
+                    f"   • Consumidor {consumer_id} aguardando liberação para iniciar consumo"
+                )
+                if not start_event.wait(timeout=start_timeout):
+                    self.logger.error(
+                        f"Consumidor {consumer_id} não foi liberado para consumir dentro do timeout"
+                    )
+                    return {
+                        "success": False,
+                        "consumer_id": consumer_id,
+                        "error": "Timeout aguardando liberação para consumir",
+                    }
+
             if tech == "kafka":
                 consumer = KafkaCons()
                 success = consumer.consume_messages(expected_count)
@@ -113,23 +131,37 @@ class BenchmarkOrchestrator:
         # Iniciar consumidores (exceto para baseline)
         consumer_results = []
         consumer_threads = []
+        messages_per_consumer = max(1, math.ceil(count / num_consumers))
+
+        send_times_event: Optional[Event] = None
+
         if tech != "baseline":
             # IMPORTANTE: Iniciar consumidores ANTES dos produtores para que estejam prontos,
             # mas eles só começam a processar após os produtores terminarem
             self.logger.info(f"   • Preparando {num_consumers} consumidor(es)...")
+            send_times_event = Event()
             
             # Iniciar consumidores em threads separadas para não bloquear
             def run_consumer_wrapper(tech_arg, consumer_id_arg, expected_count_arg):
                 """Wrapper para executar consumidor e armazenar resultado"""
                 try:
-                    result = self.run_consumer_process(tech_arg, consumer_id_arg, expected_count_arg)
+                    result = self.run_consumer_process(
+                        tech_arg,
+                        consumer_id_arg,
+                        expected_count_arg,
+                        start_event=send_times_event,
+                    )
                     consumer_results.append(result)
                 except Exception as e:
                     self.logger.error(f"Erro no consumidor {consumer_id_arg}: {e}")
                     consumer_results.append({"success": False, "consumer_id": consumer_id_arg, "error": str(e)})
             
             for i in range(num_consumers):
-                thread = Thread(target=run_consumer_wrapper, args=(tech, i, count), daemon=False)  # Não daemon para não terminar prematuramente
+                thread = Thread(
+                    target=run_consumer_wrapper,
+                    args=(tech, i, messages_per_consumer),
+                    daemon=False,
+                )  # Não daemon para não terminar prematuramente
                 thread.start()
                 consumer_threads.append(thread)
 
@@ -144,10 +176,25 @@ class BenchmarkOrchestrator:
         # Iniciar produtores
         self.logger.info(f"   • Iniciando {num_producers} produtor(es)...")
         with Pool(processes=num_producers) as pool:
-            producer_args = [
-                (tech, i, messages_per_producer, size, rps, count)
-                for i in range(num_producers)
-            ]
+            producer_args = []
+            current_offset = 0
+            for i in range(num_producers):
+                messages_for_this_producer = messages_per_producer + (
+                    1 if i < (count % num_producers) else 0
+                )
+                producer_args.append(
+                    (
+                        tech,
+                        i,
+                        messages_for_this_producer,
+                        size,
+                        rps,
+                        count,
+                        current_offset,
+                    )
+                )
+                current_offset += messages_for_this_producer
+
             producer_results = pool.starmap(self.run_producer_process, producer_args)
         
         # CRÍTICO: Aguardar produtores terminarem e salvarem send_times ANTES de consumidores processarem
@@ -158,11 +205,30 @@ class BenchmarkOrchestrator:
         # Verificar se os arquivos send_times foram criados
         from ..core.config import LOGS_DIR
         metrics_dir = LOGS_DIR / tech
-        send_times_files = list(metrics_dir.glob("*_send_times.json"))
-        if send_times_files:
-            self.logger.info(f"   • {len(send_times_files)} arquivo(s) send_times encontrado(s)")
-        else:
-            self.logger.warning("   • ⚠️ Nenhum arquivo send_times encontrado ainda")
+        wait_start = time.time()
+        required_files = num_producers if tech != "baseline" else 0
+        send_times_files = []
+        if tech != "baseline":
+            while time.time() - wait_start < 30:
+                send_times_files = list(metrics_dir.glob("*_send_times.json"))
+                if len(send_times_files) >= required_files:
+                    break
+                time.sleep(1)
+            if send_times_files:
+                self.logger.info(
+                    f"   • {len(send_times_files)} arquivo(s) send_times encontrado(s)"
+                )
+            else:
+                self.logger.warning(
+                    "   • ⚠️ Nenhum arquivo send_times encontrado após aguardar 30s"
+                )
+
+        # Liberar consumidores após confirmação dos arquivos de send_times
+        if send_times_event is not None:
+            self.logger.info(
+                "   • Liberando consumidores após confirmação dos arquivos send_times"
+            )
+            send_times_event.set()
         
         # Aguardar consumidores terminarem (com timeout)
         if tech != "baseline":
