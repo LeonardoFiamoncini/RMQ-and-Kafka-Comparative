@@ -2,13 +2,15 @@
 Módulo de orquestração de benchmarks
 """
 
+import csv
 import math
+import subprocess
 import time
+import uuid
+from datetime import datetime
 from multiprocessing import Pool
 from threading import Event, Thread
 from typing import Any, Dict, Optional
-
-import subprocess
 
 from ..brokers.baseline.client import BaselineClient
 from ..brokers.baseline.server import BaselineServer
@@ -16,9 +18,16 @@ from ..brokers.kafka.consumer import KafkaConsumerBroker as KafkaCons
 from ..brokers.kafka.producer import KafkaProducerBroker as KafkaProd
 from ..brokers.rabbitmq.consumer import RabbitMQConsumer as RabbitMQCons
 from ..brokers.rabbitmq.producer import RabbitMQProducer as RabbitMQProd
-from ..core.config import BENCHMARK_CONFIG
+from ..core.config import BENCHMARK_CONFIG, LOGS_DIR
 from ..core.logger import Logger
 from ..core.metrics import MetricsCollector
+
+# Import de visualização (opcional - não quebra se não disponível)
+try:
+    from ..visualization.plotter import BenchmarkPlotter
+    VISUALIZATION_AVAILABLE = True
+except ImportError:
+    VISUALIZATION_AVAILABLE = False
 
 
 class BenchmarkOrchestrator:
@@ -37,21 +46,22 @@ class BenchmarkOrchestrator:
         rps: Optional[int] = None,
         total_messages: int = 0,  # Mantido para compatibilidade
         id_offset: int = 0,
+        run_id: Optional[str] = None,
     ) -> Dict[str, Any]:
         """Executa um processo produtor individual"""
         try:
             if tech == "kafka":
-                producer = KafkaProd()
+                producer = KafkaProd(run_id=run_id)
                 success = producer.send_messages(
                     messages_per_producer, message_size, rps, id_offset=id_offset
                 )
             elif tech == "rabbitmq":
-                producer = RabbitMQProd()
+                producer = RabbitMQProd(run_id=run_id)
                 success = producer.send_messages(
                     messages_per_producer, message_size, rps, id_offset=id_offset
                 )
             elif tech == "baseline":
-                client = BaselineClient()
+                client = BaselineClient(run_id=run_id)
                 success = client.send_messages(
                     messages_per_producer, message_size, rps, id_offset=id_offset
                 )
@@ -74,29 +84,31 @@ class BenchmarkOrchestrator:
         expected_count: int,
         start_event: Optional[Event] = None,
         start_timeout: float = 120.0,
+        run_id: Optional[str] = None,
     ) -> Dict[str, Any]:
-        """Executa um processo consumidor individual"""
+        """
+        Executa um processo consumidor individual
+        
+        CORRIGIDO: Consumidores NÃO aguardam Event para começar a consumir.
+        Eles começam IMEDIATAMENTE e processam mensagens conforme chegam.
+        O Event é usado apenas internamente pelos consumidores para carregar send_times.
+        
+        Isso garante que a latência medida seja APENAS o tempo de propagação
+        através do broker, não incluindo tempo de sincronização do teste.
+        """
         try:
-            if start_event is not None:
-                self.logger.info(
-                    f"   • Consumidor {consumer_id} aguardando liberação para iniciar consumo"
-                )
-                if not start_event.wait(timeout=start_timeout):
-                    self.logger.error(
-                        f"Consumidor {consumer_id} não foi liberado para consumir dentro do timeout"
-                    )
-                    return {
-                        "success": False,
-                        "consumer_id": consumer_id,
-                        "error": "Timeout aguardando liberação para consumir",
-                    }
-
+            # REMOVIDO: Não aguardar Event aqui
+            # Os consumidores devem começar a consumir IMEDIATAMENTE
+            # para que a latência meça apenas o tempo real de propagação
+            
             if tech == "kafka":
-                consumer = KafkaCons()
-                success = consumer.consume_messages(expected_count)
+                consumer = KafkaCons(run_id=run_id)
+                # Passar o Event para o consumidor usar internamente
+                success = consumer.consume_messages(expected_count, send_times_event=start_event)
             elif tech == "rabbitmq":
-                consumer = RabbitMQCons()
-                success = consumer.consume_messages(expected_count)
+                consumer = RabbitMQCons(run_id=run_id)
+                # Passar o Event para o consumidor usar internamente
+                success = consumer.consume_messages(expected_count, send_times_event=start_event)
             else:
                 return {"success": False, "error": f"Tecnologia {tech} não suportada"}
 
@@ -124,6 +136,10 @@ class BenchmarkOrchestrator:
         self.logger.info(f"   • Tamanho da mensagem: {size} bytes")
 
         start_time = time.time()
+        run_id = f"{tech}-{int(start_time)}-{uuid.uuid4().hex[:6]}"
+        self.logger.info(f"   • Execução: {run_id}")
+        run_metrics_dir = LOGS_DIR / tech / run_id
+        run_metrics_dir.mkdir(parents=True, exist_ok=True)
 
         # Calcular mensagens por produtor
         messages_per_producer = count // num_producers
@@ -136,8 +152,8 @@ class BenchmarkOrchestrator:
         send_times_event: Optional[Event] = None
 
         if tech != "baseline":
-            # IMPORTANTE: Iniciar consumidores ANTES dos produtores para que estejam prontos,
-            # mas eles só começam a processar após os produtores terminarem
+            # IMPORTANTE: Iniciar consumidores ANTES dos produtores para que já estejam conectados.
+            # Eles começam a consumir imediatamente; o Event serve apenas para sincronizar o carregamento de send_times.
             self.logger.info(f"   • Preparando {num_consumers} consumidor(es)...")
             send_times_event = Event()
             
@@ -150,6 +166,7 @@ class BenchmarkOrchestrator:
                         consumer_id_arg,
                         expected_count_arg,
                         start_event=send_times_event,
+                        run_id=run_id,
                     )
                     consumer_results.append(result)
                 except Exception as e:
@@ -191,11 +208,21 @@ class BenchmarkOrchestrator:
                         rps,
                         count,
                         current_offset,
+                        run_id,
                     )
                 )
                 current_offset += messages_for_this_producer
 
             producer_results = pool.starmap(self.run_producer_process, producer_args)
+        
+        failed_producers = [r for r in producer_results if not r.get("success")]
+        if failed_producers:
+            errors = ", ".join(
+                f"id={item.get('producer_id')} erro={item.get('error')}"
+                for item in failed_producers
+            )
+            self.logger.error(f"❌ Produtores falharam: {errors}")
+            raise RuntimeError("Execução abortada: produtores não conseguiram enviar mensagens.")
         
         # CRÍTICO: Aguardar produtores terminarem e salvarem send_times ANTES de consumidores processarem
         # Aguardar um pouco mais para garantir que TODOS os arquivos send_times foram salvos
@@ -203,8 +230,7 @@ class BenchmarkOrchestrator:
         time.sleep(10)  # Aumentar tempo de espera para garantir que arquivos foram salvos
         
         # Verificar se os arquivos send_times foram criados
-        from ..core.config import LOGS_DIR
-        metrics_dir = LOGS_DIR / tech
+        metrics_dir = run_metrics_dir
         wait_start = time.time()
         required_files = num_producers if tech != "baseline" else 0
         send_times_files = []
@@ -238,6 +264,16 @@ class BenchmarkOrchestrator:
                 thread.join(timeout=120)  # Timeout de 2 minutos
             # Aguardar um pouco para garantir que os arquivos foram salvos
             time.sleep(2)
+            failed_consumers = [r for r in consumer_results if not r.get("success")]
+            if failed_consumers:
+                errors = ", ".join(
+                    f"id={item.get('consumer_id')} erro={item.get('error')}"
+                    for item in failed_consumers
+                )
+                self.logger.error(f"❌ Consumidores falharam: {errors}")
+                raise RuntimeError(
+                    "Execução abortada: consumidores não conseguiram processar mensagens."
+                )
 
         end_time = time.time()
 
@@ -252,28 +288,19 @@ class BenchmarkOrchestrator:
         )
 
         # Calcular latência (T) e throughput (V) a partir dos arquivos de métricas
-        from ..core.config import LOGS_DIR
-        from pathlib import Path
-        import csv
-        import json
-        
         avg_latency = 0.0
         total_latencies = []
         messages_processed = 0
         
-        # Buscar TODOS os arquivos de latência criados recentemente (últimos 5 minutos)
-        # e consolidar as latências de todos eles
-        metrics_dir = LOGS_DIR / tech
-        import time as time_module
-        current_time = time_module.time()
-        latency_files = sorted(metrics_dir.glob("*_latency.csv"), key=lambda p: p.stat().st_mtime, reverse=True)
+        metrics_dir = run_metrics_dir
+        latency_files = sorted(metrics_dir.glob("*_latency.csv"))
         
-        # Filtrar apenas arquivos criados nos últimos 5 minutos (300 segundos)
-        recent_files = [f for f in latency_files if (current_time - f.stat().st_mtime) < 300]
+        # Usar dicionário para evitar duplicatas por msg_id (CORRIGIDO: usar msg_id, não latência)
+        latencies_by_msg_id = {}
         
-        if recent_files:
-            # Ler latências de TODOS os arquivos recentes e consolidar
-            for latency_file in recent_files:
+        if latency_files:
+            # Ler latências de TODOS os arquivos da execução atual e consolidar
+            for latency_file in latency_files:
                 try:
                     with open(latency_file, 'r') as f:
                         reader = csv.DictReader(f)
@@ -281,34 +308,41 @@ class BenchmarkOrchestrator:
                             try:
                                 latency_val = float(row['latency_seconds'])
                                 msg_id = row.get('msg_id', '')
-                                # Evitar duplicatas usando msg_id como chave
-                                if latency_val > 0:  # Ignorar latências inválidas
-                                    total_latencies.append(latency_val)
-                                    messages_processed += 1
-                            except (ValueError, KeyError):
+                                
+                                # Validar apenas latências negativas (erro matemático)
+                                # Latências >= 0 são válidas, incluindo valores muito pequenos (< 1ms)
+                                # Exemplo: baseline HTTP local pode ter latências < 1ms
+                                if latency_val < 0:
+                                    self.logger.warning(f"Latência NEGATIVA inválida para msg_id {msg_id}: {latency_val}")
+                                    continue
+                                
+                                # Evitar duplicatas usando msg_id como chave (CORRIGIDO)
+                                # Se já existe, manter a primeira ocorrência (ou a mais recente)
+                                if msg_id and msg_id not in latencies_by_msg_id:
+                                    latencies_by_msg_id[msg_id] = latency_val
+                                elif msg_id and msg_id in latencies_by_msg_id:
+                                    # Se já existe, logar mas manter a primeira
+                                    self.logger.debug(f"Duplicata detectada para msg_id {msg_id}, mantendo primeira ocorrência")
+                            except (ValueError, KeyError) as e:
+                                self.logger.debug(f"Erro ao processar linha: {e}")
                                 continue
                 except Exception as e:
                     self.logger.warning(f"Erro ao ler arquivo de latência {latency_file}: {e}")
                     continue
             
-            if total_latencies:
-                # Remover duplicatas mantendo a ordem
-                seen_ids = set()
-                unique_latencies = []
-                for lat in total_latencies:
-                    if lat not in seen_ids:
-                        unique_latencies.append(lat)
-                        seen_ids.add(lat)
-                total_latencies = unique_latencies
+            if latencies_by_msg_id:
+                # Converter dicionário para lista de latências (já sem duplicatas)
+                total_latencies = list(latencies_by_msg_id.values())
                 messages_processed = len(total_latencies)
                 avg_latency = sum(total_latencies) / len(total_latencies) if total_latencies else 0
                 
                 # Calcular percentis de latência
                 sorted_latencies = sorted(total_latencies)
                 n = len(sorted_latencies)
-                latency_50 = sorted_latencies[int(n * 0.5)] if n > 0 else 0
-                latency_95 = sorted_latencies[int(n * 0.95)] if n > 0 else 0
-                latency_99 = sorted_latencies[int(n * 0.99)] if n > 0 else 0
+                # CORRIGIDO: Usar (n-1) para evitar índice fora de range e calcular percentis corretamente
+                latency_50 = sorted_latencies[int((n - 1) * 0.5)] if n > 0 else 0
+                latency_95 = sorted_latencies[int((n - 1) * 0.95)] if n > 0 else 0
+                latency_99 = sorted_latencies[int((n - 1) * 0.99)] if n > 0 else 0
             else:
                 latency_50 = latency_95 = latency_99 = 0
         
@@ -325,9 +359,10 @@ class BenchmarkOrchestrator:
                         elif row.get('metric') == 'total_received':
                             messages_processed = int(row.get('value', 0))
         
-        # Se ainda não temos mensagens processadas, usar mensagens enviadas
         if messages_processed == 0:
-            messages_processed = total_messages_sent
+            self.logger.warning(
+                "Nenhuma latência registrada para esta execução; verifique produtores/consumidores."
+            )
         
         # Calcular throughput (V): mensagens processadas por segundo
         throughput = messages_processed / duration if duration > 0 else 0
@@ -338,6 +373,7 @@ class BenchmarkOrchestrator:
 
         results = {
             "tech": tech,
+            "run_id": run_id,
             "duration": duration,
             "total_messages": count,
             "messages_sent": total_messages_sent,
@@ -380,7 +416,37 @@ class BenchmarkOrchestrator:
         self.logger.info(f"   • V (Throughput): {throughput:.2f} mensagens/segundo")
         self.logger.info(f"   • Mensagens processadas: {messages_processed:,}")
         self.logger.info(f"   • Duração total: {duration:.2f} segundos")
-
+        
+        # Gerar gráficos automaticamente após benchmark (se disponível)
+        if VISUALIZATION_AVAILABLE:
+            try:
+                self.logger.info("📊 Gerando gráficos de visualização...")
+                plotter = BenchmarkPlotter()
+                
+                # Gerar distribuição de latências para este sistema
+                plots = plotter.plot_all_for_system(tech, run_id)
+                
+                if plots:
+                    self.logger.info(f"   • {len(plots)} gráfico(s) gerado(s) para {tech}")
+                    for plot in plots:
+                        self.logger.info(f"     - {plot.name}")
+                
+                # Gerar gráficos comparativos (se houver dados de múltiplos sistemas)
+                comp_latency = plotter.plot_latency_comparison(
+                    save_as=f"latest_latency_comparison_{datetime.now().strftime('%Y%m%d_%H%M%S')}.png"
+                )
+                comp_throughput = plotter.plot_throughput_comparison(
+                    save_as=f"latest_throughput_comparison_{datetime.now().strftime('%Y%m%d_%H%M%S')}.png"
+                )
+                comp_summary = plotter.plot_comparative_summary(
+                    save_as=f"latest_comparative_summary_{datetime.now().strftime('%Y%m%d_%H%M%S')}.png"
+                )
+                
+                self.logger.info(f"📁 Gráficos salvos em: {plotter.output_dir}")
+                
+            except Exception as e:
+                self.logger.warning(f"Erro ao gerar gráficos (não-crítico): {e}")
+        
         return results
 
     def _save_benchmark_results(

@@ -142,15 +142,20 @@ else
     echo "⚠️ Arquivo requirements.txt não encontrado. Instalando dependências básicas..."
     requirements=(
         flask==3.1.1
+        werkzeug==3.0.1
         pika==1.3.2
         kafka-python==2.2.11
         psutil==7.0.0
         requests==2.31.0
+        matplotlib==3.10.7
+        seaborn==0.13.2
+        pandas==2.3.3
+        numpy==2.3.5
+        scipy==1.16.3
         black==24.10.0
         isort==5.13.2
         flake8==7.1.1
-        pytest==7.4.0
-        pytest-cov==4.1.0
+        pytest==8.3.3
     )
     echo "➡️ Instalando: ${requirements[*]}"
     pip install --no-cache-dir "${requirements[@]}"

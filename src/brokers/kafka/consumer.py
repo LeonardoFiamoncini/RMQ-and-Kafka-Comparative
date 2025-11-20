@@ -8,6 +8,7 @@ import os
 import signal
 import sys
 import time
+from threading import Event
 from typing import Optional
 
 from kafka import KafkaConsumer
@@ -19,8 +20,8 @@ from ..base import BaseBroker
 class KafkaConsumerBroker(BaseBroker):
     """Implementação do consumidor Kafka"""
 
-    def __init__(self):
-        super().__init__("kafka")
+    def __init__(self, run_id: Optional[str] = None):
+        super().__init__("kafka", run_id=run_id)
         self.config = BROKER_CONFIGS["kafka"]
         self.send_times = {}
         self._load_send_times()
@@ -113,11 +114,22 @@ class KafkaConsumerBroker(BaseBroker):
                     self.send_times = {}
                     return
 
-    def consume_messages(self, expected_count: int) -> bool:
+    def consume_messages(self, expected_count: int, send_times_event: Optional['Event'] = None) -> bool:
         """
         Consome mensagens do Kafka
+        
+        CORRIGIDO: Consumidor inicia IMEDIATAMENTE e processa mensagens conforme chegam.
+        O Event é usado apenas para aguardar send_times serem salvos.
+        
+        Args:
+            expected_count: Número de mensagens esperadas
+            send_times_event: Event para sinalizar que send_times estão disponíveis
         """
         try:
+            # Armazenar Event para uso posterior
+            self.send_times_event = send_times_event
+            self.send_times_loaded = False
+            
             # Inicializar métricas
             self.metrics.start_timing()
 
@@ -189,10 +201,23 @@ class KafkaConsumerBroker(BaseBroker):
 
                             msg_id = message.value.get("id")
                             
+                            # CORRIGIDO: Aguardar send_times estarem disponíveis (apenas uma vez)
+                            if not self.send_times_loaded:
+                                # Tentar carregar send_times primeiro
+                                self._load_send_times()
+                                
+                                # Se ainda não temos send_times, aguardar Event
+                                if not self.send_times and self.send_times_event is not None:
+                                    self.logger.debug("Send_times vazio, aguardando Event...")
+                                    self.send_times_event.wait(timeout=120)
+                                    self._load_send_times()
+                                
+                                self.send_times_loaded = True
+                                self.logger.info(f"Send_times carregados: {len(self.send_times)} timestamps")
+                            
                             # Filtrar apenas mensagens desta execução (que estão nos send_times)
-                            # Se a mensagem não está nos send_times, é uma mensagem antiga - ignorar
                             if msg_id not in self.send_times:
-                                # Tentar recarregar send_times uma vez
+                                # Tentar recarregar send_times
                                 old_count = len(self.send_times)
                                 self._load_send_times()
                                 new_count = len(self.send_times)
@@ -217,6 +242,16 @@ class KafkaConsumerBroker(BaseBroker):
                                 self._processed_messages.add(unique_key)
                                 
                                 latency = recv_time - float(self.send_times[msg_id])
+                                
+                                # CORRIGIDO: Tratar latências muito pequenas/negativas (erro de precisão)
+                                if latency < 0.000001:  # < 1 microssegundo
+                                    if latency < 0:
+                                        self.logger.debug(
+                                            f"Latência negativa detectada para msg_id {msg_id}: {latency:.9f}s "
+                                            f"(erro de precisão). Ajustando para 0.000001s"
+                                        )
+                                    latency = max(0.000001, latency)
+                                
                                 self.metrics.record_latency(msg_id, latency)
                                 self.logger.info(
                                     f"Mensagem {msg_id} recebida com latência de {latency:.6f} segundos"

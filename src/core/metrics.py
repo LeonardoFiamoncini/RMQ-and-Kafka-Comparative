@@ -20,14 +20,22 @@ from .logger import Logger
 class MetricsCollector:
     """Coletor de métricas para benchmarks."""
 
-    def __init__(self, tech: str, experiment_type: str = "benchmark"):
+    def __init__(
+        self,
+        tech: str,
+        experiment_type: str = "benchmark",
+        run_id: Optional[str] = None,
+    ):
         """Inicializa o coletor de métricas."""
         self.tech = tech
         self.experiment_type = experiment_type
         self.logger = Logger.get_logger(f"metrics.{tech}")
         unique_suffix = uuid.uuid4().hex[:6]
         self.timestamp = f"{datetime.now().strftime('%Y-%m-%d_%H-%M-%S')}_{unique_suffix}"
-        self.metrics_dir = LOGS_DIR / tech
+        self.base_dir = LOGS_DIR / tech
+        self.base_dir.mkdir(parents=True, exist_ok=True)
+        self.run_id = run_id or datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
+        self.metrics_dir = self.base_dir / self.run_id
         self.metrics_dir.mkdir(parents=True, exist_ok=True)
 
         # Métricas coletadas
@@ -35,6 +43,8 @@ class MetricsCollector:
         self.send_times: Dict[str, float] = {}
         self.start_time: Optional[float] = None
         self.end_time: Optional[float] = None
+        # CORRIGIDO: Rastrear msg_ids já registrados para evitar duplicatas
+        self._recorded_msg_ids: set = set()
 
     def start_timing(self):
         """Inicia o cronômetro."""
@@ -49,7 +59,19 @@ class MetricsCollector:
         self.send_times[message_id] = timestamp
 
     def record_latency(self, message_id: str, latency: float):
-        """Registra a latência de uma mensagem."""
+        """
+        Registra a latência de uma mensagem.
+        
+        CORRIGIDO: Evita registrar a mesma mensagem múltiplas vezes.
+        Se a mensagem já foi registrada, ignora silenciosamente.
+        """
+        # Evitar duplicatas: se já registramos esta mensagem, ignorar
+        if message_id in self._recorded_msg_ids:
+            self.logger.debug(f"Mensagem {message_id} já foi registrada, ignorando duplicata")
+            return
+        
+        # Registrar mensagem
+        self._recorded_msg_ids.add(message_id)
         self.latencies.append((message_id, latency))
 
     def save_send_times(self) -> Path:
@@ -111,7 +133,7 @@ class MetricsCollector:
 
     def save_benchmark_results(self, config: Dict[str, Any]) -> Path:
         """Salva resultados do benchmark em CSV consolidado."""
-        file_path = self.metrics_dir / "benchmark_results.csv"
+        file_path = self.base_dir / "benchmark_results.csv"
 
         # Usar valores passados no config se disponíveis (valores calculados pelo orchestrator)
         # Caso contrário, calcular a partir das latências coletadas
@@ -132,9 +154,10 @@ class MetricsCollector:
                 if latencies:
                     latencies.sort()
                     n = len(latencies)
-                    latency_50 = latencies[int(n * 0.5)] if n > 0 else 0
-                    latency_95 = latencies[int(n * 0.95)] if n > 0 else 0
-                    latency_99 = latencies[int(n * 0.99)] if n > 0 else 0
+                    # CORRIGIDO: Usar (n-1) para evitar índice fora de range e calcular percentis corretamente
+                    latency_50 = latencies[int((n - 1) * 0.5)] if n > 0 else 0
+                    latency_95 = latencies[int((n - 1) * 0.95)] if n > 0 else 0
+                    latency_99 = latencies[int((n - 1) * 0.99)] if n > 0 else 0
                 else:
                     # Se não temos latências coletadas, usar avg_latency para todos os percentis
                     latency_50 = latency_95 = latency_99 = latency_avg
@@ -150,9 +173,10 @@ class MetricsCollector:
             if latencies:
                 latencies.sort()
                 n = len(latencies)
-                latency_50 = latencies[int(n * 0.5)]
-                latency_95 = latencies[int(n * 0.95)]
-                latency_99 = latencies[int(n * 0.99)]
+                # CORRIGIDO: Usar (n-1) para evitar índice fora de range e calcular percentis corretamente
+                latency_50 = latencies[int((n - 1) * 0.5)] if n > 0 else 0
+                latency_95 = latencies[int((n - 1) * 0.95)] if n > 0 else 0
+                latency_99 = latencies[int((n - 1) * 0.99)] if n > 0 else 0
                 latency_avg = sum(latencies) / n
             else:
                 latency_50 = latency_95 = latency_99 = latency_avg = 0

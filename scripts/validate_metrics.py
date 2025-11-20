@@ -201,9 +201,43 @@ def validate_system(system: str) -> dict:
         "benchmark_results": None
     }
     
-    # Encontrar arquivos mais recentes
-    latency_files = sorted(system_dir.glob("*_latency.csv"), key=lambda p: p.stat().st_mtime, reverse=True)
-    send_times_files = sorted(system_dir.glob("*_send_times.json"), key=lambda p: p.stat().st_mtime, reverse=True)
+    run_dirs = sorted(
+        [item for item in system_dir.iterdir() if item.is_dir()],
+        key=lambda p: p.stat().st_mtime,
+        reverse=True,
+    )
+
+    latency_files = []
+    send_times_files = []
+
+    if run_dirs:
+        for run_dir in run_dirs[:3]:
+            latency_files.extend(
+                sorted(
+                    run_dir.glob("*_latency.csv"),
+                    key=lambda p: p.stat().st_mtime,
+                    reverse=True,
+                )[:1]
+            )
+            send_times_files.extend(
+                sorted(
+                    run_dir.glob("*_send_times.json"),
+                    key=lambda p: p.stat().st_mtime,
+                    reverse=True,
+                )[:1]
+            )
+    else:
+        # Compatibilidade com estrutura antiga (sem subdiretórios)
+        latency_files = sorted(
+            system_dir.glob("*_latency.csv"),
+            key=lambda p: p.stat().st_mtime,
+            reverse=True,
+        )
+        send_times_files = sorted(
+            system_dir.glob("*_send_times.json"),
+            key=lambda p: p.stat().st_mtime,
+            reverse=True,
+        )
     benchmark_file = system_dir / "benchmark_results.csv"
     
     # Validar arquivos de latência

@@ -17,9 +17,9 @@ from ...core.config import BROKER_CONFIGS
 class KafkaProducerBroker(BaseBroker):
     """Implementação do produtor Kafka."""
 
-    def __init__(self):
+    def __init__(self, run_id: Optional[str] = None):
         """Inicializa o produtor Kafka."""
-        super().__init__("kafka")
+        super().__init__("kafka", run_id=run_id)
         self.config = BROKER_CONFIGS["kafka"]
 
     def create_topic_for_queue_mode(

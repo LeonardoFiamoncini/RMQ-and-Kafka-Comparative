@@ -52,12 +52,12 @@ def index():
 
 @app.route("/benchmark-rabbitmq")
 def benchmark_rabbitmq():
-    script_path = os.path.join(BASE_DIR, "benchmark_runner.py")
+    script_path = os.path.join(BASE_DIR, "main.py")
     count = request.args.get("count", default="1000")
     size = request.args.get("size", default="200")
     benchmark_id = f"rabbitmq_{int(time.time())}"
     benchmarks[benchmark_id] = Popen(
-        ["python", script_path, "--only", "rabbitmq", "--count", count, "--size", size]
+        ["python", script_path, "--system", "rabbitmq", "--count", count, "--size", size, "--producers", "4", "--consumers", "4"]
     )
     return jsonify(
         {"message": "🏁 Benchmark exclusivo do RabbitMQ iniciado.", "id": benchmark_id}
@@ -66,12 +66,12 @@ def benchmark_rabbitmq():
 
 @app.route("/benchmark-kafka")
 def benchmark_kafka():
-    script_path = os.path.join(BASE_DIR, "benchmark_runner.py")
+    script_path = os.path.join(BASE_DIR, "main.py")
     count = request.args.get("count", default="1000")
     size = request.args.get("size", default="200")
     benchmark_id = f"kafka_{int(time.time())}"
     benchmarks[benchmark_id] = Popen(
-        ["python", script_path, "--only", "kafka", "--count", count, "--size", size]
+        ["python", script_path, "--system", "kafka", "--count", count, "--size", size, "--producers", "4", "--consumers", "4"]
     )
     return jsonify(
         {
@@ -83,15 +83,16 @@ def benchmark_kafka():
 
 @app.route("/run-benchmark")
 def run_benchmark():
-    script_path = os.path.join(BASE_DIR, "benchmark_runner.py")
+    script_path = os.path.join(BASE_DIR, "main.py")
     count = request.args.get("count", default="1000")
     size = request.args.get("size", default="200")
-    benchmark_id = f"both_{int(time.time())}"
+    system = request.args.get("system", default="rabbitmq")
+    benchmark_id = f"{system}_{int(time.time())}"
     benchmarks[benchmark_id] = Popen(
-        ["python", script_path, "--count", count, "--size", size]
+        ["python", script_path, "--system", system, "--count", count, "--size", size, "--producers", "4", "--consumers", "4"]
     )
     return jsonify(
-        {"message": "🏁 Benchmark comparativo iniciado.", "id": benchmark_id}
+        {"message": f"🏁 Benchmark {system} iniciado.", "id": benchmark_id}
     )
 
 

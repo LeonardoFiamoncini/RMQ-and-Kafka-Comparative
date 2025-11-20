@@ -214,7 +214,7 @@ groups | grep docker
 source venv/bin/activate
 
 # Verificar instalação das dependências
-pip list | grep -E -i "(flask|pika|kafka-python|requests|black|isort|flake8)"
+pip list | grep -E -i "(flask|werkzeug|pika|kafka-python|requests|matplotlib|seaborn|pandas|numpy|scipy|black|isort|flake8|pytest)"
 ```
 
 ### Passo 4: Inicialização da Infraestrutura
@@ -282,7 +282,7 @@ curl -s http://localhost:9000 | grep -i kafdrop
 Para garantir medições assertivas, o sistema utiliza parâmetros específicos passados via linha de comando:
 
 #### **a) Número de Mensagens (`--count`)**
-- **Valores válidos**: `10`, `100`, `1000`, `10000`, `100000`
+- **Valores válidos**: `5`, `10`, `15`, `100`, `1000`, `10000`, `100000`
 - **Descrição**: Quantidade total de mensagens a serem enviadas e processadas
 
 #### **b) Número de Produtores (`--producers`)**
@@ -308,33 +308,64 @@ O sistema coleta e exibe as seguintes métricas:
 #### **i) T (Tempo de Permanência na Fila)**
 - **Definição**: Latência média de uma mensagem desde o envio até o processamento
 - **Unidade**: Segundos (com precisão de microssegundos)
-- **Arquivo**: `logs/<system>/*_latency.csv`
+- **Arquivo**: `logs/<system>/<run_id>/*_latency.csv`
 
 #### **ii) V (Throughput / Vazão)**
 - **Definição**: Número de mensagens processadas por unidade de tempo
 - **Unidade**: Mensagens por segundo
 - **Cálculo**: `V = mensagens_processadas / duração_total`
 
+> 💡 **Importante:** Cada execução gera um identificador exclusivo `run_id`
+> (por exemplo, `kafka-1732070501-a1b2c3`) e salva todos os arquivos dessa
+> execução em `logs/<system>/<run_id>/`. O arquivo consolidado
+> `benchmark_results.csv` continua em `logs/<system>/`.
+
 ### 📝 Exemplos de Uso
 
-#### **Exemplo 1: Teste Básico com RabbitMQ**
+#### **Exemplo 1: Teste Comparativo Justo - Porte Pequeno (100 RPS)**
 ```bash
-python main.py --count 100 --producers 1 --consumers 4 --system rabbitmq
+# Testar os 3 sistemas com MESMOS parâmetros para comparação justa
+python main.py --server --port 5000 &
+sleep 3
+python main.py --count 100 --producers 1 --consumers 4 --system baseline --rps 100
+pkill -f "python main.py --server"
+
+python main.py --count 100 --producers 1 --consumers 4 --system rabbitmq --rps 100
+python main.py --count 100 --producers 1 --consumers 4 --system kafka --rps 100
 ```
 
-#### **Exemplo 2: Teste com Múltiplos Produtores (Kafka)**
+#### **Exemplo 2: Teste Comparativo Justo - Porte Médio (1.000 RPS)**
 ```bash
-python main.py --count 1000 --producers 16 --consumers 64 --system kafka
+# Testar os 3 sistemas com MESMOS parâmetros
+python main.py --server --port 5000 &
+sleep 3
+python main.py --count 1000 --producers 4 --consumers 4 --system baseline --rps 1000
+pkill -f "python main.py --server"
+
+python main.py --count 1000 --producers 4 --consumers 4 --system rabbitmq --rps 1000
+python main.py --count 1000 --producers 4 --consumers 4 --system kafka --rps 1000
 ```
 
-#### **Exemplo 3: Teste de Alta Carga (Baseline)**
+#### **Exemplo 3: Teste Comparativo Justo - Porte Grande (10.000 RPS)**
 ```bash
-python main.py --count 10000 --producers 64 --consumers 64 --system baseline
+# Testar os 3 sistemas com MESMOS parâmetros
+python main.py --server --port 5000 &
+sleep 3
+python main.py --count 10000 --producers 16 --consumers 64 --system baseline --rps 10000
+pkill -f "python main.py --server"
+
+python main.py --count 10000 --producers 16 --consumers 64 --system rabbitmq --rps 10000
+python main.py --count 10000 --producers 16 --consumers 64 --system kafka --rps 10000
 ```
 
-#### **Exemplo 4: Teste com Rate Limiting**
+#### **Exemplo 4: Teste de Chaos Engineering**
 ```bash
-python main.py --count 1000 --producers 4 --consumers 4 --system rabbitmq --rps 100
+python main.py --chaos --count 5 --size 100 --system rabbitmq
+```
+
+#### **Exemplo 5: Gerar Gráficos Comparativos**
+```bash
+python generate_plots.py --system all
 ```
 
 ### ⚠️ Preparação Importante
@@ -363,103 +394,111 @@ echo "Testando Kafka..."
 curl -s http://localhost:9000 | grep -i kafdrop | head -1
 ```
 
+### 🎯 Metodologia de Comparação Justa
+
+**IMPORTANTE**: Para uma comparação científica válida, os três sistemas (Baseline, RabbitMQ, Kafka) são testados com **EXATAMENTE OS MESMOS PARÂMETROS** em cada porte. Isso garante que as diferenças de performance sejam atribuídas às tecnologias, não a configurações diferentes.
+
+#### Portes Definidos
+
+| Porte | RPS | Mensagens | Produtores | Consumidores | Caracterização |
+|-------|-----|-----------|------------|--------------|----------------|
+| **Pequeno** | 100 | 100 | 1 | 4 | Aplicações corporativas internas, MVPs |
+| **Médio** | 1.000 | 1.000 | 4 | 4 | Plataformas de comércio eletrônico estabelecidas |
+| **Grande** | 10.000 | 10.000 | 16 | 64 | Serviços globais, redes sociais, mercados financeiros |
+
+**Proporção geométrica**: 1:10:100 (fundamentada em Jain, 1991)
+
 ### Estrutura dos Testes
 
-O sistema executa **8 categorias principais de testes**, cada uma validando aspectos específicos da aplicação:
+O sistema executa **testes comparativos justos por porte** e **testes adicionais de recursos**:
 
-1. **Testes Básicos de Funcionalidade**
-2. **Testes de Rate Limiting (RPS)**
-3. **Testes de Múltiplos Clientes**
-4. **Testes de Chaos Engineering**
-5. **Testes de Monitoramento**
-6. **Testes Integrados**
-7. **Testes de Baseline HTTP**
-8. **Testes de Performance Comparativa**
+#### **Testes Comparativos por Porte (Comparação Justa)**
+1. **Porte Pequeno (100 RPS)**: Baseline, RabbitMQ, Kafka com mesmos parâmetros
+2. **Porte Médio (1.000 RPS)**: Baseline, RabbitMQ, Kafka com mesmos parâmetros
+3. **Porte Grande (10.000 RPS)**: Baseline, RabbitMQ, Kafka com mesmos parâmetros
 
-### Execução Sequencial de Todos os Testes
+#### **Testes Adicionais de Recursos**
+4. **Chaos Engineering**: Tolerância a falhas
+5. **Rate Limiting**: Validação de controle de taxa
+6. **Monitoramento**: Coleta de métricas de recursos
+7. **Visualização**: Geração de gráficos comparativos
 
-#### **TESTE 1: Validação Básica dos Brokers**
+### Execução de Testes Comparativos Justos
+
+#### **TESTE COMPARATIVO: Porte Pequeno (100 RPS)**
+
+**Parâmetros idênticos para os 3 sistemas**: 100 mensagens, 1 produtor, 4 consumidores, RPS=100
 
 ```bash
 # Ativar ambiente virtual
 source venv/bin/activate
 
-# Teste 1.1: Baseline HTTP (com servidor)
-echo "=== TESTE 1.1: Baseline HTTP ==="
-# Iniciar servidor em background
+# Baseline - Pequeno Porte
 python main.py --server --port 5000 &
 sleep 3
-# Executar teste
-python main.py --count 10 --producers 1 --consumers 4 --system baseline
-# Parar servidor
+python main.py --count 100 --producers 1 --consumers 4 --system baseline --rps 100
 pkill -f "python main.py --server"
 
-# Teste 1.2: RabbitMQ
-echo "=== TESTE 1.2: RabbitMQ ==="
-python main.py --count 100 --producers 1 --consumers 4 --system rabbitmq
+# RabbitMQ - Pequeno Porte (MESMOS PARÂMETROS)
+python main.py --count 100 --producers 1 --consumers 4 --system rabbitmq --rps 100
 
-# Teste 1.3: Kafka
-echo "=== TESTE 1.3: Kafka ==="
-python main.py --count 100 --producers 1 --consumers 4 --system kafka
+# Kafka - Pequeno Porte (MESMOS PARÂMETROS)
+python main.py --count 100 --producers 1 --consumers 4 --system kafka --rps 100
 ```
 
-**✅ Critério de Sucesso**: Todos os testes devem mostrar "✅ Benchmark finalizado" sem erros.
+**✅ Critério de Sucesso**: Comparação justa com mesmos parâmetros permite identificar qual tecnologia tem melhor performance.
 
-#### **TESTE 2: Rate Limiting (RPS)**
+#### **TESTE COMPARATIVO: Porte Médio (1.000 RPS)**
+
+**Parâmetros idênticos para os 3 sistemas**: 1.000 mensagens, 4 produtores, 4 consumidores, RPS=1000
 
 ```bash
-# Teste 2.1: Baseline com RPS
-echo "=== TESTE 2.1: Baseline com Rate Limiting ==="
+# Baseline - Médio Porte
 python main.py --server --port 5000 &
 sleep 3
-python main.py --count 100 --producers 1 --consumers 4 --system baseline --rps 10
+python main.py --count 1000 --producers 4 --consumers 4 --system baseline --rps 1000
 pkill -f "python main.py --server"
 
-# Teste 2.2: RabbitMQ com RPS
-echo "=== TESTE 2.2: RabbitMQ com Rate Limiting ==="
-python main.py --count 100 --producers 4 --consumers 4 --system rabbitmq --rps 20
+# RabbitMQ - Médio Porte (MESMOS PARÂMETROS)
+python main.py --count 1000 --producers 4 --consumers 4 --system rabbitmq --rps 1000
 
-# Teste 2.3: Kafka com RPS
-echo "=== TESTE 2.3: Kafka com Rate Limiting ==="
-python main.py --count 100 --producers 4 --consumers 4 --system kafka --rps 20
+# Kafka - Médio Porte (MESMOS PARÂMETROS)
+python main.py --count 1000 --producers 4 --consumers 4 --system kafka --rps 1000
 ```
 
-**✅ Critério de Sucesso**: Throughput deve estar próximo ao RPS especificado.
+#### **TESTE COMPARATIVO: Porte Grande (10.000 RPS)**
 
-#### **TESTE 3: Múltiplos Clientes Concorrentes**
+**Parâmetros idênticos para os 3 sistemas**: 10.000 mensagens, 16 produtores, 64 consumidores, RPS=10000
 
 ```bash
-# Teste 3.1: Baseline com múltiplos clientes
-echo "=== TESTE 3.1: Baseline - Múltiplos Clientes ==="
+# Baseline - Grande Porte
 python main.py --server --port 5000 &
 sleep 3
-python main.py --count 1000 --producers 16 --consumers 4 --system baseline
+python main.py --count 10000 --producers 16 --consumers 64 --system baseline --rps 10000
 pkill -f "python main.py --server"
 
-# Teste 3.2: RabbitMQ com múltiplos clientes
-echo "=== TESTE 3.2: RabbitMQ - Múltiplos Clientes ==="
-python main.py --count 1000 --producers 16 --consumers 64 --system rabbitmq
+# RabbitMQ - Grande Porte (MESMOS PARÂMETROS)
+python main.py --count 10000 --producers 16 --consumers 64 --system rabbitmq --rps 10000
 
-# Teste 3.3: Kafka com múltiplos clientes
-echo "=== TESTE 3.3: Kafka - Múltiplos Clientes ==="
-python main.py --count 1000 --producers 16 --consumers 64 --system kafka
+# Kafka - Grande Porte (MESMOS PARÂMETROS)
+python main.py --count 10000 --producers 16 --consumers 64 --system kafka --rps 10000
 ```
 
-**✅ Critério de Sucesso**: Throughput deve aumentar proporcionalmente ao número de clientes.
+**✅ Critério de Sucesso**: Comparação justa permite identificar qual tecnologia escala melhor em alta carga.
 
-#### **TESTE 4: Chaos Engineering (Tolerância a Falhas)**
+#### **TESTE ADICIONAL: Chaos Engineering (Tolerância a Falhas)**
 
 ```bash
-# Teste 4.1: Chaos Engineering - RabbitMQ
-echo "=== TESTE 4.1: Chaos Engineering - RabbitMQ ==="
-python main.py --chaos --count 5 --size 100 --only rabbitmq
+# Teste Chaos Engineering - RabbitMQ
+echo "=== TESTE: Chaos Engineering - RabbitMQ ==="
+python main.py --chaos --count 5 --size 100 --system rabbitmq
 
 # Aguardar recuperação
 sleep 30
 
-# Teste 4.2: Chaos Engineering - Kafka
-echo "=== TESTE 4.2: Chaos Engineering - Kafka ==="
-python main.py --chaos --count 5 --size 100 --only kafka
+# Teste Chaos Engineering - Kafka
+echo "=== TESTE: Chaos Engineering - Kafka ==="
+python main.py --chaos --count 5 --size 100 --system kafka
 
 # Aguardar recuperação
 sleep 30
@@ -467,191 +506,33 @@ sleep 30
 
 **✅ Critério de Sucesso**: Sistema deve se recuperar automaticamente após falhas.
 
-#### **TESTE 5: Monitoramento de Recursos**
+#### **TESTE ADICIONAL: Geração de Gráficos Comparativos**
 
 ```bash
-# Teste 5.1: Monitoramento - RabbitMQ
-echo "=== TESTE 5.1: Monitoramento - RabbitMQ ==="
-python main.py --count 5 --size 100 --only rabbitmq
-
-# Teste 5.2: Monitoramento - Kafka
-echo "=== TESTE 5.2: Monitoramento - Kafka ==="
-python main.py --count 5 --size 100 --only kafka
+# Gerar todos os gráficos comparativos
+echo "=== TESTE: Geração de Gráficos ==="
+python generate_plots.py --system all
 ```
 
-**✅ Critério de Sucesso**: Arquivos de monitoramento devem ser gerados em `logs/`.
+**✅ Critério de Sucesso**: Gráficos devem ser gerados em `logs/plots/` com comparações visuais entre os sistemas.
 
-#### **TESTE 6: Benchmarks Integrados**
+### Script de Execução Automática - Testes Comparativos Justos
+
+Para executar todos os testes comparativos justos automaticamente:
 
 ```bash
-# Teste 6.1: Benchmark RabbitMQ
-echo "=== TESTE 6.1: Benchmark RabbitMQ ==="
-python main.py --count 1000 --producers 4 --consumers 4 --system rabbitmq
-
-# Teste 6.2: Benchmark Kafka
-echo "=== TESTE 6.2: Benchmark Kafka ==="
-python main.py --count 1000 --producers 4 --consumers 4 --system kafka
-
-# Teste 6.3: Benchmark Baseline
-echo "=== TESTE 6.3: Benchmark Baseline ==="
-python main.py --server --port 5000 &
-sleep 3
-python main.py --count 1000 --producers 4 --consumers 4 --system baseline
-pkill -f "python main.py --server"
+# Executar script de testes comparativos por porte
+./test_comparativo_justo_por_porte.sh
 ```
 
-**✅ Critério de Sucesso**: Todos os brokers devem ser testados em sequência.
+Este script executa:
+1. **Porte Pequeno (100 RPS)**: Baseline, RabbitMQ, Kafka com mesmos parâmetros
+2. **Porte Médio (1.000 RPS)**: Baseline, RabbitMQ, Kafka com mesmos parâmetros
+3. **Porte Grande (10.000 RPS)**: Baseline, RabbitMQ, Kafka com mesmos parâmetros
+4. **Chaos Engineering**: Testes de tolerância a falhas
+5. **Geração de Gráficos**: Gráficos comparativos automáticos
 
-#### **TESTE 7: Baseline HTTP Detalhado**
-
-```bash
-# Teste 7.1: Iniciar servidor baseline
-echo "=== TESTE 7.1: Iniciando Servidor Baseline ==="
-python main.py --server --port 5000 &
-
-# Aguardar inicialização
-sleep 5
-
-# Teste 7.2: Testar cliente baseline
-echo "=== TESTE 7.2: Testando Cliente Baseline ==="
-python main.py --count 15 --size 100 --only baseline
-
-# Parar servidor
-pkill -f "python main.py --server"
-```
-
-**✅ Critério de Sucesso**: Servidor deve responder e processar requisições.
-
-#### **TESTE 8: Performance Comparativa Extensiva**
-
-```bash
-# Teste 8.1: Performance com diferentes números de mensagens
-echo "=== TESTE 8.1: Performance - Volume de Mensagens ==="
-# Teste com 10 mensagens
-python main.py --count 10 --producers 1 --consumers 4 --system rabbitmq
-python main.py --count 10 --producers 1 --consumers 4 --system kafka
-
-# Teste com 100 mensagens
-python main.py --count 100 --producers 1 --consumers 4 --system rabbitmq
-python main.py --count 100 --producers 1 --consumers 4 --system kafka
-
-# Teste com 1000 mensagens
-python main.py --count 1000 --producers 4 --consumers 4 --system rabbitmq
-python main.py --count 1000 --producers 4 --consumers 4 --system kafka
-
-# Teste com 10000 mensagens
-python main.py --count 10000 --producers 16 --consumers 64 --system rabbitmq
-python main.py --count 10000 --producers 16 --consumers 64 --system kafka
-
-# Teste com 100000 mensagens
-python main.py --count 100000 --producers 64 --consumers 64 --system rabbitmq
-python main.py --count 100000 --producers 64 --consumers 64 --system kafka
-
-# Teste 8.2: Performance com diferentes números de produtores
-echo "=== TESTE 8.2: Performance - Produtores Variados ==="
-python main.py --count 1000 --producers 1 --consumers 4 --system rabbitmq
-python main.py --count 1000 --producers 4 --consumers 4 --system rabbitmq
-python main.py --count 1000 --producers 16 --consumers 64 --system rabbitmq
-python main.py --count 1000 --producers 64 --consumers 64 --system rabbitmq
-```
-
-**✅ Critério de Sucesso**: Dados suficientes para análise estatística.
-
-### Script de Execução Automática
-
-Para executar todos os testes automaticamente:
-
-```bash
-# Criar script de execução completa
-cat > executar_todos_testes.sh << 'EOF'
-#!/bin/bash
-
-echo "🎓 INICIANDO EXECUÇÃO COMPLETA DE TODOS OS TESTES"
-echo "=================================================="
-
-# Ativar ambiente virtual
-source venv/bin/activate
-
-# Limpar logs antigos para evitar confusão
-echo "🧹 Limpando logs antigos..."
-./scripts/clear_logs.sh
-
-# Verificar se containers estão rodando
-if ! docker compose ps | grep -q "Up"; then
-    echo "❌ Containers não estão rodando. Iniciando..."
-    docker compose up -d
-    sleep 60
-fi
-
-# Executar todos os testes
-echo "🧪 Executando Teste 1: Validação Básica"
-# Baseline com servidor
-python main.py --server --port 5000 &
-sleep 3
-python main.py --count 100 --producers 1 --consumers 4 --system baseline
-pkill -f "python main.py --server"
-# RabbitMQ e Kafka
-python main.py --count 100 --producers 1 --consumers 4 --system rabbitmq
-python main.py --count 100 --producers 1 --consumers 4 --system kafka
-
-echo "🧪 Executando Teste 2: Rate Limiting"
-python main.py --server --port 5000 &
-sleep 3
-python main.py --count 100 --producers 1 --consumers 4 --system baseline --rps 10
-pkill -f "python main.py --server"
-python main.py --count 100 --producers 4 --consumers 4 --system rabbitmq --rps 20
-python main.py --count 100 --producers 4 --consumers 4 --system kafka --rps 20
-
-echo "🧪 Executando Teste 3: Múltiplos Clientes"
-python main.py --server --port 5000 &
-sleep 3
-python main.py --count 1000 --producers 16 --consumers 4 --system baseline
-pkill -f "python main.py --server"
-python main.py --count 1000 --producers 16 --consumers 64 --system rabbitmq
-python main.py --count 1000 --producers 16 --consumers 64 --system kafka
-
-echo "🧪 Executando Teste 4: Chaos Engineering"
-python main.py --chaos --count 100 --producers 1 --consumers 4 --system rabbitmq
-sleep 30
-python main.py --chaos --count 100 --producers 1 --consumers 4 --system kafka
-sleep 30
-
-echo "🧪 Executando Teste 5: Monitoramento"
-python main.py --count 100 --producers 1 --consumers 4 --system rabbitmq
-python main.py --count 100 --producers 1 --consumers 4 --system kafka
-
-echo "🧪 Executando Teste 6: Benchmarks Integrados"
-python main.py --count 1000 --producers 4 --consumers 4 --system rabbitmq
-python main.py --count 1000 --producers 4 --consumers 4 --system kafka
-python main.py --server --port 5000 &
-sleep 3
-python main.py --count 1000 --producers 4 --consumers 4 --system baseline
-pkill -f "python main.py --server"
-
-echo "🧪 Executando Teste 7: Baseline HTTP"
-python main.py --server --port 5000 &
-sleep 5
-python main.py --count 100 --producers 1 --consumers 4 --system baseline
-pkill -f "python main.py --server"
-
-echo "🧪 Executando Teste 8: Performance Comparativa"
-python main.py --count 1000 --producers 4 --consumers 4 --system rabbitmq
-python main.py --count 1000 --producers 4 --consumers 4 --system kafka
-python main.py --server --port 5000 &
-sleep 3
-python main.py --count 1000 --producers 4 --consumers 4 --system baseline
-pkill -f "python main.py --server"
-
-echo "✅ TODOS OS TESTES CONCLUÍDOS COM SUCESSO!"
-echo "📊 Verifique os resultados em: logs/"
-EOF
-
-# Dar permissão de execução
-chmod +x executar_todos_testes.sh
-
-# Executar todos os testes
-./executar_todos_testes.sh
-```
+**✅ Vantagem**: Comparação científica justa com mesmos parâmetros permite identificar qual tecnologia tem melhor performance em cada porte.
 
 ---
 
@@ -663,21 +544,24 @@ chmod +x executar_todos_testes.sh
 logs/
 ├── baseline/
 │   ├── benchmark_results.csv          # Resultados consolidados
-│   ├── [timestamp]_send_times.json    # Timestamps de envio
-│   ├── [timestamp]_latency.csv        # Medições de latência
-│   └── [timestamp]_summary.csv        # Resumo estatístico
+│   └── <run_id>/
+│       ├── [timestamp]_send_times.json    # Timestamps de envio
+│       ├── [timestamp]_latency.csv        # Medições de latência
+│       └── [timestamp]_summary.csv        # Resumo estatístico
 ├── kafka/
 │   ├── benchmark_results.csv          # Resultados consolidados
-│   ├── [timestamp]_send_times.json    # Timestamps de envio
-│   ├── [timestamp]_latency.csv        # Medições de latência
-│   ├── [timestamp]_summary.csv        # Resumo estatístico
-│   └── resource_monitoring.csv        # Monitoramento de recursos
+│   └── <run_id>/
+│       ├── [timestamp]_send_times.json    # Timestamps de envio
+│       ├── [timestamp]_latency.csv        # Medições de latência
+│       ├── [timestamp]_summary.csv        # Resumo estatístico
+│       └── resource_monitoring.csv        # Monitoramento de recursos
 └── rabbitmq/
     ├── benchmark_results.csv          # Resultados consolidados
-    ├── [timestamp]_send_times.json    # Timestamps de envio
-    ├── [timestamp]_latency.csv        # Medições de latência
-    ├── [timestamp]_summary.csv        # Resumo estatístico
-    └── resource_monitoring.csv        # Monitoramento de recursos
+    └── <run_id>/
+        ├── [timestamp]_send_times.json    # Timestamps de envio
+        ├── [timestamp]_latency.csv        # Medições de latência
+        ├── [timestamp]_summary.csv        # Resumo estatístico
+        └── resource_monitoring.csv        # Monitoramento de recursos
 ```
 
 ### Análise dos Resultados
@@ -754,71 +638,41 @@ echo "=== RECURSOS KAFKA ==="
 ls -la logs/kafka/*resource_monitoring.csv | tail -1 | xargs head -10
 ```
 
-### Visualização Gráfica (Opcional)
+### Visualização Gráfica Automática
 
-#### Instalação de Ferramentas de Visualização
+O sistema gera **automaticamente gráficos comparativos** após cada execução de benchmark. Os gráficos são salvos em `logs/plots/`.
+
+#### Geração Automática
+
+Os gráficos são gerados **automaticamente** após cada execução de benchmark. Não é necessário executar comandos adicionais.
+
+#### Geração Manual de Gráficos
+
+Para gerar gráficos manualmente ou atualizar gráficos existentes:
+
 ```bash
-# Instalar ferramentas para análise de dados
-pip install pandas matplotlib seaborn numpy
+# Gerar todos os gráficos disponíveis
+python generate_plots.py --system all
 
-# Criar script de visualização
-cat > visualizar_resultados.py << 'EOF'
-#!/usr/bin/env python3
-import pandas as pd
-import matplotlib.pyplot as plt
-import seaborn as sns
-import glob
-import os
+# Gerar gráficos de um sistema específico
+python generate_plots.py --system rabbitmq
+python generate_plots.py --system kafka
+python generate_plots.py --system baseline
 
-def plot_benchmark_results():
-    """Criar gráficos dos resultados de benchmark"""
-    
-    # Carregar dados
-    baseline_data = pd.read_csv('logs/baseline/benchmark_results.csv')
-    rabbitmq_data = pd.read_csv('logs/rabbitmq/benchmark_results.csv')
-    kafka_data = pd.read_csv('logs/kafka/benchmark_results.csv')
-    
-    # Combinar dados
-    all_data = pd.concat([
-        baseline_data.assign(broker='Baseline'),
-        rabbitmq_data.assign(broker='RabbitMQ'),
-        kafka_data.assign(broker='Kafka')
-    ])
-    
-    # Criar gráficos
-    fig, axes = plt.subplots(2, 2, figsize=(15, 10))
-    
-    # Throughput por broker
-    sns.barplot(data=all_data, x='broker', y='throughput', ax=axes[0,0])
-    axes[0,0].set_title('Throughput por Broker')
-    axes[0,0].set_ylabel('Mensagens/segundo')
-    
-    # Latência por broker
-    sns.barplot(data=all_data, x='broker', y='avg_latency', ax=axes[0,1])
-    axes[0,1].set_title('Latência Média por Broker')
-    axes[0,1].set_ylabel('Latência (segundos)')
-    
-    # Taxa de sucesso
-    sns.barplot(data=all_data, x='broker', y='success_rate', ax=axes[1,0])
-    axes[1,0].set_title('Taxa de Sucesso por Broker')
-    axes[1,0].set_ylabel('Taxa de Sucesso (%)')
-    
-    # Duração total
-    sns.barplot(data=all_data, x='broker', y='duration', ax=axes[1,1])
-    axes[1,1].set_title('Duração Total por Broker')
-    axes[1,1].set_ylabel('Duração (segundos)')
-    
-    plt.tight_layout()
-    plt.savefig('benchmark_results.png', dpi=300, bbox_inches='tight')
-    print("📊 Gráfico salvo como: benchmark_results.png")
-
-if __name__ == "__main__":
-    plot_benchmark_results()
-EOF
-
-# Executar visualização
-python visualizar_resultados.py
+# Gerar gráficos de uma execução específica
+python generate_plots.py --system rabbitmq --run-id rabbitmq-1763656609-ee18d8
 ```
+
+#### Tipos de Gráficos Gerados
+
+1. **Comparação de Latência**: Compara latência média (T) entre sistemas
+2. **Comparação de Throughput**: Compara throughput (V) entre sistemas
+3. **Resumo Comparativo**: Gráfico completo com múltiplas métricas (T, V, percentis)
+4. **Distribuição de Latências**: Histograma de latências por sistema
+
+**Localização**: Todos os gráficos são salvos em `logs/plots/`
+
+**Dependências**: As bibliotecas de visualização (matplotlib==3.10.7, seaborn==0.13.2, pandas==2.3.3, numpy==2.3.5, scipy==1.16.3) já estão incluídas no `requirements.txt` e são instaladas automaticamente.
 
 ---
 
@@ -833,7 +687,7 @@ python visualizar_resultados.py
   - **Baseline HTTP**: 0.001-0.010s
   - **RabbitMQ**: 0.001-0.005s
   - **Apache Kafka**: 0.001-0.003s
-- **Arquivo**: `logs/<system>/*_latency.csv` (coluna `latency_seconds`)
+- **Arquivo**: `logs/<system>/<run_id>/*_latency.csv` (coluna `latency_seconds`)
 
 #### 2. **V (Throughput / Vazão)**
 - **Definição**: Número de mensagens processadas por unidade de tempo
@@ -854,55 +708,58 @@ python visualizar_resultados.py
 
 ### Análise Comparativa
 
-#### Cenário 1: Teste com 100 Mensagens
+#### Cenário 1: Teste Comparativo Justo - Porte Pequeno (100 RPS)
 ```bash
-# Executar teste específico
+# Executar teste comparativo justo (MESMOS parâmetros para os 3 sistemas)
 python main.py --server --port 5000 &
 sleep 3
-python main.py --count 100 --producers 1 --consumers 4 --system baseline
-python main.py --count 100 --producers 1 --consumers 4 --system rabbitmq
-python main.py --count 100 --producers 1 --consumers 4 --system kafka
+python main.py --count 100 --producers 1 --consumers 4 --system baseline --rps 100
 pkill -f "python main.py --server"
 
+python main.py --count 100 --producers 1 --consumers 4 --system rabbitmq --rps 100
+python main.py --count 100 --producers 1 --consumers 4 --system kafka --rps 100
+
 # Analisar resultados
-echo "=== COMPARAÇÃO - 100 MENSAGENS ==="
+echo "=== COMPARAÇÃO JUSTA - PORTE PEQUENO (100 RPS) ==="
 echo "Baseline - T (Latência): $(tail -1 logs/baseline/benchmark_results.csv | cut -d',' -f8) segundos | V (Throughput): $(tail -1 logs/baseline/benchmark_results.csv | cut -d',' -f12) msgs/s"
 echo "RabbitMQ - T (Latência): $(tail -1 logs/rabbitmq/benchmark_results.csv | cut -d',' -f8) segundos | V (Throughput): $(tail -1 logs/rabbitmq/benchmark_results.csv | cut -d',' -f12) msgs/s"
 echo "Kafka    - T (Latência): $(tail -1 logs/kafka/benchmark_results.csv | cut -d',' -f8) segundos | V (Throughput): $(tail -1 logs/kafka/benchmark_results.csv | cut -d',' -f12) msgs/s"
 ```
 
-#### Cenário 2: Teste com 10.000 Mensagens e Múltiplos Produtores
+#### Cenário 2: Teste Comparativo Justo - Porte Médio (1.000 RPS)
 ```bash
-# Executar teste específico
+# Executar teste comparativo justo (MESMOS parâmetros para os 3 sistemas)
 python main.py --server --port 5000 &
 sleep 3
-python main.py --count 10000 --producers 16 --consumers 64 --system baseline
-python main.py --count 10000 --producers 16 --consumers 64 --system rabbitmq
-python main.py --count 10000 --producers 16 --consumers 64 --system kafka
+python main.py --count 1000 --producers 4 --consumers 4 --system baseline --rps 1000
 pkill -f "python main.py --server"
 
+python main.py --count 1000 --producers 4 --consumers 4 --system rabbitmq --rps 1000
+python main.py --count 1000 --producers 4 --consumers 4 --system kafka --rps 1000
+
 # Analisar resultados
-echo "=== COMPARAÇÃO - 10.000 MENSAGENS, 16 PRODUTORES, 64 CONSUMIDORES ==="
+echo "=== COMPARAÇÃO JUSTA - PORTE MÉDIO (1.000 RPS) ==="
 echo "Baseline - T (Latência): $(tail -1 logs/baseline/benchmark_results.csv | cut -d',' -f8) segundos | V (Throughput): $(tail -1 logs/baseline/benchmark_results.csv | cut -d',' -f12) msgs/s"
 echo "RabbitMQ - T (Latência): $(tail -1 logs/rabbitmq/benchmark_results.csv | cut -d',' -f8) segundos | V (Throughput): $(tail -1 logs/rabbitmq/benchmark_results.csv | cut -d',' -f12) msgs/s"
 echo "Kafka    - T (Latência): $(tail -1 logs/kafka/benchmark_results.csv | cut -d',' -f8) segundos | V (Throughput): $(tail -1 logs/kafka/benchmark_results.csv | cut -d',' -f12) msgs/s"
 ```
 
-#### Cenário 3: Teste com Rate Limiting
+#### Cenário 3: Teste Comparativo Justo - Porte Grande (10.000 RPS)
 ```bash
-# Executar teste com rate limiting
+# Executar teste comparativo justo (MESMOS parâmetros para os 3 sistemas)
 python main.py --server --port 5000 &
 sleep 3
-python main.py --count 1000 --producers 4 --consumers 4 --system baseline --rps 50
-python main.py --count 1000 --producers 4 --consumers 4 --system rabbitmq --rps 50
-python main.py --count 1000 --producers 4 --consumers 4 --system kafka --rps 50
+python main.py --count 10000 --producers 16 --consumers 64 --system baseline --rps 10000
 pkill -f "python main.py --server"
 
-# Verificar se rate limiting funcionou
-echo "=== VERIFICAÇÃO RATE LIMITING ==="
-echo "Baseline - V (Throughput): $(tail -1 logs/baseline/benchmark_results.csv | cut -d',' -f12) msgs/s (esperado ~50)"
-echo "RabbitMQ - V (Throughput): $(tail -1 logs/rabbitmq/benchmark_results.csv | cut -d',' -f12) msgs/s (esperado ~50)"
-echo "Kafka    - V (Throughput): $(tail -1 logs/kafka/benchmark_results.csv | cut -d',' -f12) msgs/s (esperado ~50)"
+python main.py --count 10000 --producers 16 --consumers 64 --system rabbitmq --rps 10000
+python main.py --count 10000 --producers 16 --consumers 64 --system kafka --rps 10000
+
+# Analisar resultados
+echo "=== COMPARAÇÃO JUSTA - PORTE GRANDE (10.000 RPS) ==="
+echo "Baseline - T (Latência): $(tail -1 logs/baseline/benchmark_results.csv | cut -d',' -f8) segundos | V (Throughput): $(tail -1 logs/baseline/benchmark_results.csv | cut -d',' -f12) msgs/s"
+echo "RabbitMQ - T (Latência): $(tail -1 logs/rabbitmq/benchmark_results.csv | cut -d',' -f8) segundos | V (Throughput): $(tail -1 logs/rabbitmq/benchmark_results.csv | cut -d',' -f12) msgs/s"
+echo "Kafka    - T (Latência): $(tail -1 logs/kafka/benchmark_results.csv | cut -d',' -f8) segundos | V (Throughput): $(tail -1 logs/kafka/benchmark_results.csv | cut -d',' -f12) msgs/s"
 ```
 
 ### Relatório de Análise
@@ -1114,7 +971,7 @@ curl -X POST http://localhost:5000/notify -H "Content-Type: application/json" -d
 ./scripts/clear_logs.sh
 
 # Executar teste novamente
-python main.py --count 5 --size 100 --only rabbitmq
+python main.py --count 5 --size 100 --system rabbitmq
 ```
 
 #### 10. **Erro: "Mensagem recebida sem timestamp correspondente"**
@@ -1122,7 +979,7 @@ python main.py --count 5 --size 100 --only rabbitmq
 # Este erro indica que o consumidor está lendo mensagens antigas
 # Limpar logs e executar teste limpo
 ./scripts/clear_logs.sh
-python main.py --count 5 --size 100 --only kafka
+python main.py --count 5 --size 100 --system kafka
 ```
 
 ### Logs de Debug
@@ -1189,22 +1046,59 @@ main.py → BenchmarkOrchestrator → Broker Classes → Metrics Collection → 
 ### Configurações Técnicas
 
 #### RabbitMQ
-- **Versão**: 4.1.1
+- **Versão**: 4.1.1 (imagem: `rabbitmq:4.1.1-management`)
 - **Cluster**: 3 nós com Quorum Queues
 - **Portas**: 5672 (AMQP), 15672 (Management)
 - **Configurações**: Confirmação de entrega, mensagens persistentes
 
 #### Apache Kafka
-- **Versão**: 4.0 (imagem Docker: `apache/kafka:4.0.0`)
+- **Versão**: 4.0.0 (imagem Docker: `apache/kafka:4.0.0`)
 - **Modo**: KRaft (sem Zookeeper)
 - **Queue Mode**: Simulação de KIP-932
 - **Portas**: 9092 (Broker), 9000 (Kafdrop)
-- **Nota**: A imagem oficial do Apache Kafka 4.0 é usada com configuração KRaft personalizada. O arquivo de configuração está em `config/kraft-server.properties`.
+- **Nota**: A imagem oficial do Apache Kafka 4.0.0 é usada com configuração KRaft personalizada. O arquivo de configuração está em `config/kraft-server.properties`.
 
 #### Baseline HTTP
-- **Framework**: Flask
-- **Porta**: 5000 (configurável)
+- **Framework**: Flask 3.1.1
+- **Porta**: 5000 (configurável via `--port`)
 - **Processamento**: 1ms simulado por requisição
+
+### Recursos da Aplicação
+
+#### 1. **Benchmark Comparativo Justo**
+- Testes comparativos com mesmos parâmetros para cada porte
+- Comparação científica válida entre Baseline, RabbitMQ e Kafka
+- Script automatizado: `test_comparativo_justo_por_porte.sh`
+
+#### 2. **Geração Automática de Gráficos**
+- Gráficos comparativos gerados automaticamente após cada benchmark
+- Script manual: `python generate_plots.py --system all`
+- Tipos de gráficos:
+  - Comparação de Latência
+  - Comparação de Throughput
+  - Resumo Comparativo
+  - Distribuição de Latências
+
+#### 3. **Chaos Engineering**
+- Testes de tolerância a falhas
+- Simulação de falhas e recuperação automática
+- Comando: `python main.py --chaos --count 5 --size 100 --system rabbitmq`
+- **Nota**: Para chaos engineering, os parâmetros `--producers` e `--consumers` são opcionais (padrão: 1 produtor, 4 consumidores)
+
+#### 4. **Rate Limiting (RPS)**
+- Controle de taxa de mensagens por segundo
+- Parâmetro: `--rps <valor>`
+- Validação de throughput controlado
+
+#### 5. **Monitoramento de Recursos**
+- Coleta automática de CPU e memória
+- Arquivos de monitoramento em `logs/<system>/`
+
+#### 6. **Métricas Precisas**
+- Latência (T) com precisão de microssegundos
+- Throughput (V) em mensagens por segundo
+- Percentis: P50, P95, P99
+- Arquivos CSV e JSON para análise posterior
 
 ### Métricas Coletadas
 

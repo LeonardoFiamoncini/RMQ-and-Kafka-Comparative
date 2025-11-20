@@ -16,8 +16,8 @@ from ..base import BaseBroker
 class RabbitMQProducer(BaseBroker):
     """Implementação do produtor RabbitMQ"""
 
-    def __init__(self):
-        super().__init__("rabbitmq")
+    def __init__(self, run_id: Optional[str] = None):
+        super().__init__("rabbitmq", run_id=run_id)
         self.config = BROKER_CONFIGS["rabbitmq"]
 
     def send_messages(

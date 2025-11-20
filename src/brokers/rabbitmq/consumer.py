@@ -8,6 +8,7 @@ import os
 import signal
 import sys
 import time
+from threading import Event
 from typing import Optional
 
 import pika
@@ -19,11 +20,13 @@ from ..base import BaseBroker
 class RabbitMQConsumer(BaseBroker):
     """Implementação do consumidor RabbitMQ"""
 
-    def __init__(self):
-        super().__init__("rabbitmq")
+    def __init__(self, run_id: Optional[str] = None):
+        super().__init__("rabbitmq", run_id=run_id)
         self.config = BROKER_CONFIGS["rabbitmq"]
         self.send_times = {}
-        self._load_send_times()
+        self.send_times_event = None  # Event para aguardar send_times
+        self.send_times_loaded = False  # Flag para carregar apenas uma vez
+        # NÃO carregar send_times no __init__, aguardar Event
 
     def _load_send_times(self):
         """Carrega os tempos de envio do arquivo mais recente"""
@@ -112,8 +115,14 @@ class RabbitMQConsumer(BaseBroker):
                     return
 
     def _callback(self, ch, method, properties, body):
-        """Callback para processar mensagens recebidas"""
-        recv_time = time.time()
+        """
+        Callback para processar mensagens recebidas
+        
+        CORRIGIDO: Aguarda send_times estarem disponíveis antes de calcular latência.
+        Isso não bloqueia o recebimento de mensagens, apenas o cálculo de latência.
+        """
+        recv_time = time.time()  # T2: Capturar IMEDIATAMENTE ao receber
+        
         if self.metrics.start_time is None:
             self.metrics.start_timing()
 
@@ -127,11 +136,24 @@ class RabbitMQConsumer(BaseBroker):
             return
 
         try:
-            # Se não encontrar o timestamp, tentar recarregar send_times
-            # (os produtores podem ter terminado de salvar após o início do consumo)
+            # CORRIGIDO: Aguardar send_times estarem disponíveis
+            # (aguarda Event apenas na primeira vez)
+            if not self.send_times_loaded:
+                # Tentar carregar send_times (com retry ativo)
+                self._load_send_times()
+                
+                # Se ainda não temos send_times, aguardar Event se disponível
+                if not self.send_times and self.send_times_event is not None:
+                    self.logger.debug("Send_times vazio, aguardando Event...")
+                    self.send_times_event.wait(timeout=120)
+                    self._load_send_times()
+                
+                self.send_times_loaded = True
+                self.logger.info(f"Send_times carregados: {len(self.send_times)} timestamps")
+            
+            # Se não encontrar o timestamp, tentar recarregar
             if msg_id not in self.send_times:
-                # Recarregar send_times se não encontrar (produtores podem ter salvado entretanto)
-                self.logger.debug(f"Timestamp não encontrado para {msg_id}, recarregando send_times...")
+                self.logger.debug(f"Timestamp não encontrado para {msg_id}, recarregando...")
                 old_count = len(self.send_times)
                 self._load_send_times()
                 new_count = len(self.send_times)
@@ -141,6 +163,17 @@ class RabbitMQConsumer(BaseBroker):
             # Processar mensagem
             if msg_id in self.send_times:
                 latency = recv_time - float(self.send_times[msg_id])
+                
+                # CORRIGIDO: Tratar latências muito pequenas/negativas (erro de precisão)
+                # Latências negativas ou < 1 microssegundo são tratadas como 0
+                if latency < 0.000001:  # < 1 microssegundo
+                    if latency < 0:
+                        self.logger.debug(
+                            f"Latência negativa detectada para msg_id {msg_id}: {latency:.9f}s "
+                            f"(erro de precisão de timestamp). Ajustando para 0.000001s"
+                        )
+                    latency = max(0.000001, latency)  # Mínimo de 1 microssegundo
+                
                 self.metrics.record_latency(msg_id, latency)
                 self.logger.info(
                     f"Mensagem {msg_id} recebida com latência de {latency:.6f} segundos"
@@ -161,14 +194,20 @@ class RabbitMQConsumer(BaseBroker):
             # Rejeitar mensagem com erro (nack) - pode ser reprocessada
             ch.basic_nack(delivery_tag=method.delivery_tag, requeue=True)
 
-    def consume_messages(self, expected_count: int) -> bool:
+    def consume_messages(self, expected_count: int, send_times_event: Optional['Event'] = None) -> bool:
         """
         Consome mensagens do RabbitMQ
+        
+        CORRIGIDO: Consumidor inicia IMEDIATAMENTE e processa mensagens conforme chegam.
+        O Event é usado apenas para aguardar send_times serem salvos (para cálculo de latência).
+        
+        Args:
+            expected_count: Número de mensagens esperadas
+            send_times_event: Event para sinalizar que send_times estão disponíveis
         """
         try:
-            # Recarregar send_times antes de começar a consumir
-            # (os produtores podem ter terminado de salvar após o __init__)
-            self._load_send_times()
+            # Armazenar Event para uso no callback
+            self.send_times_event = send_times_event
             
             # Inicializar métricas
             self.metrics.start_timing()
@@ -200,12 +239,32 @@ class RabbitMQConsumer(BaseBroker):
 
             try:
                 # Consumir mensagens até atingir o limite ou timeout
-                timeout = time.time() + 60  # Timeout de 60 segundos
-                while (
-                    len(self.metrics.latencies) < expected_count
-                    and time.time() < timeout
-                ):
+                # Timeout global de 60 segundos OU timeout de inatividade de 10 segundos
+                global_timeout = time.time() + 60
+                last_message_time = time.time()
+                inactivity_timeout = 10  # Segundos sem receber mensagens
+                
+                while len(self.metrics.latencies) < expected_count:
+                    # Verificar timeout global
+                    if time.time() >= global_timeout:
+                        self.logger.warning(f"Timeout global atingido após 60s")
+                        break
+                    
+                    # Verificar timeout de inatividade
+                    if time.time() - last_message_time >= inactivity_timeout:
+                        self.logger.info(
+                            f"Timeout de inatividade: {inactivity_timeout}s sem novas mensagens. "
+                            f"Recebidas {len(self.metrics.latencies)}/{expected_count} mensagens."
+                        )
+                        break
+                    
+                    # Armazenar contagem anterior para detectar novas mensagens
+                    previous_count = len(self.metrics.latencies)
                     connection.process_data_events(time_limit=1)
+                    
+                    # Se recebemos novas mensagens, atualizar timestamp
+                    if len(self.metrics.latencies) > previous_count:
+                        last_message_time = time.time()
 
             except KeyboardInterrupt:
                 self.logger.info("Interrompido pelo usuário")

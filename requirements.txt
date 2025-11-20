@@ -1,19 +1,28 @@
-# Dependências do projeto de benchmark RabbitMQ vs Kafka
+# Dependências do projeto - Versões fixas para reprodutibilidade
 
-# Message Brokers
+# Brokers de mensageria
 kafka-python==2.2.11
 pika==1.3.2
 
-# Web Framework
+# Web framework (baseline HTTP)
 Flask==3.1.1
+Werkzeug==3.0.1
+
+# Cliente HTTP
 requests==2.31.0
 
-# Utilities
+# Monitoramento de sistema
 psutil==7.0.0
 
-# Development
-pytest==7.4.0
-pytest-cov==4.1.0
+# Visualização de dados e análise estatística (NOVO)
+matplotlib==3.10.7
+seaborn==0.13.2
+pandas==2.3.3
+numpy==2.3.5
+scipy==1.16.3
+
+# Desenvolvimento (opcional)
+pytest==8.3.3
 black==24.10.0
 isort==5.13.2
 flake8==7.1.1

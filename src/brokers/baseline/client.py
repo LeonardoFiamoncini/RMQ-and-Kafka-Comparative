@@ -16,8 +16,8 @@ from ..base import BaseBroker
 class BaselineClient(BaseBroker):
     """Cliente HTTP baseline para comparação síncrona"""
 
-    def __init__(self):
-        super().__init__("baseline")
+    def __init__(self, run_id: Optional[str] = None):
+        super().__init__("baseline", run_id=run_id)
         self.config = BROKER_CONFIGS["baseline"]
         self.base_url = f"http://{self.config['host']}:{self.config['port']}"
 
@@ -61,9 +61,8 @@ class BaselineClient(BaseBroker):
                 payload = {"id": msg_id, "body": message_content}
 
                 try:
-                    # Capturar timestamp ANTES de enviar (T1)
+                    # Capturar timestamp ANTES de enviar (T1) - apenas para requisições bem-sucedidas
                     send_time = time.time()
-                    self.metrics.record_send_time(msg_id, send_time)
                     
                     response = requests.post(
                         f"{self.base_url}{self.config['endpoint']}",
@@ -76,9 +75,20 @@ class BaselineClient(BaseBroker):
                     
                     if response.status_code == 200:
                         successful_requests += 1
+                        # Registrar send_time APENAS após confirmação de sucesso (CORRIGIDO)
+                        self.metrics.record_send_time(msg_id, send_time)
                         # Calcular latência: tempo de resposta HTTP (T2 - T1)
                         # Para baseline síncrono, a latência é o tempo total da requisição
                         latency = recv_time - send_time
+                        
+                        # CORRIGIDO: Tratar latências muito pequenas/negativas (erro de precisão)
+                        if latency < 0.000001:
+                            if latency < 0:
+                                self.logger.debug(
+                                    f"Latência negativa {latency:.9f}s (erro de precisão). Ajustando."
+                                )
+                            latency = max(0.000001, latency)
+                        
                         self.metrics.record_latency(msg_id, latency)
                         processing_time = response.json().get('processing_time', 0)
                         self.logger.info(
@@ -91,6 +101,7 @@ class BaselineClient(BaseBroker):
                         self.logger.error(
                             f"Falha ao enviar mensagem {msg_id}: Status {response.status_code}, Resposta: {response.text}"
                         )
+                        # Não registrar send_time para requisições falhadas (CORRIGIDO)
                 except requests.exceptions.Timeout:
                     failed_requests += 1
                     self.logger.error(f"Timeout ao enviar mensagem {msg_id}")

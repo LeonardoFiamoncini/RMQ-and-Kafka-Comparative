@@ -14,11 +14,11 @@ from ..core.metrics import MetricsCollector
 class BaseBroker(ABC):
     """Classe base abstrata para brokers de mensagens."""
 
-    def __init__(self, tech: str):
+    def __init__(self, tech: str, run_id: Optional[str] = None):
         """Inicializa o broker base."""
         self.tech = tech
         self.logger = Logger.get_logger(f"broker.{tech}")
-        self.metrics = MetricsCollector(tech)
+        self.metrics = MetricsCollector(tech, run_id=run_id)
 
     @abstractmethod
     def send_messages(
