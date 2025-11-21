@@ -43,6 +43,8 @@ class MetricsCollector:
         self.send_times: Dict[str, float] = {}
         self.start_time: Optional[float] = None
         self.end_time: Optional[float] = None
+        self.messages_sent: int = 0
+        self.messages_consumed: int = 0
         # CORRIGIDO: Rastrear msg_ids já registrados para evitar duplicatas
         self._recorded_msg_ids: set = set()
 
@@ -58,9 +60,13 @@ class MetricsCollector:
         """Registra o tempo de envio de uma mensagem."""
         self.send_times[message_id] = timestamp
 
-    def record_latency(self, message_id: str, latency: float):
+    def record_latency(self, latency: float, message_id: str):
         """
         Registra a latência de uma mensagem.
+        
+        Args:
+            latency: Latência em segundos
+            message_id: ID da mensagem
         
         CORRIGIDO: Evita registrar a mesma mensagem múltiplas vezes.
         Se a mensagem já foi registrada, ignora silenciosamente.

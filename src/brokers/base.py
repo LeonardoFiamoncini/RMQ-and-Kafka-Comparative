@@ -37,10 +37,9 @@ class BaseBroker(ABC):
         """
         pass
 
-    @abstractmethod
-    def consume_messages(self, expected_count: int) -> bool:
+    def consume_messages(self, expected_count: int, **kwargs) -> bool:
         """
-        Consome mensagens do broker.
+        Consome mensagens do broker (opcional para clientes HTTP).
 
         Args:
             expected_count: Número esperado de mensagens
@@ -48,17 +47,18 @@ class BaseBroker(ABC):
         Returns:
             bool: True se bem-sucedido, False caso contrário
         """
-        pass
+        # Implementação padrão vazia para clientes que não consomem
+        return True
 
-    @abstractmethod
     def get_leader(self) -> Optional[str]:
         """
-        Identifica o nó líder do cluster.
+        Identifica o nó líder do cluster (opcional).
 
         Returns:
             str: Nome do contêiner líder ou None se não encontrado
         """
-        pass
+        # Implementação padrão para sistemas sem cluster
+        return None
 
     def get_metrics(self) -> MetricsCollector:
         """Retorna o coletor de métricas."""

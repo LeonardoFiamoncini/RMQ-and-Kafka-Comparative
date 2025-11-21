@@ -1,189 +1,97 @@
 """
-Implementação do produtor Kafka.
-
-Este módulo implementa o produtor Kafka com suporte a Queue Mode (KIP-932)
-e configurações otimizadas para benchmarks de performance.
+Implementação simplificada do produtor Kafka para TCC
 """
 
-from kafka import KafkaProducer, KafkaAdminClient
-from kafka.admin import NewTopic
-import time
 import json
+import time
+import uuid
 from typing import Optional
-from ..base import BaseBroker
+
+from kafka import KafkaProducer
+from kafka.errors import KafkaError
+
 from ...core.config import BROKER_CONFIGS
+from ..base import BaseBroker
 
 
 class KafkaProducerBroker(BaseBroker):
-    """Implementação do produtor Kafka."""
+    """Produtor Kafka simplificado - envia mensagens com timestamp embutido"""
 
     def __init__(self, run_id: Optional[str] = None):
-        """Inicializa o produtor Kafka."""
         super().__init__("kafka", run_id=run_id)
-        self.config = BROKER_CONFIGS["kafka"]
-
-    def create_topic_for_queue_mode(
-        self,
-        topic_name: str = None,
-        num_partitions: int = 3,
-        replication_factor: int = 1,
-    ) -> bool:
-        """
-        Cria um tópico configurado para Queue Mode (Share Groups) do Kafka 4.0.
-
-        Args:
-            topic_name: Nome do tópico
-            num_partitions: Número de partições
-            replication_factor: Fator de replicação
-
-        Returns:
-            bool: True se bem-sucedido, False caso contrário
-        """
-        if topic_name is None:
-            topic_name = self.config["topic"]
-
-        try:
-            admin_client = KafkaAdminClient(
-                bootstrap_servers=self.config["bootstrap_servers"],
-                client_id="queue_mode_admin",
-            )
-
-            # Verificar se o tópico já existe
-            existing_topics = admin_client.list_topics()
-            if topic_name in existing_topics:
-                self.logger.info(f"Tópico {topic_name} já existe")
-                admin_client.close()
-                return True
-
-            # Criar novo tópico com configurações para Queue Mode
-            topic = NewTopic(
-                name=topic_name,
-                num_partitions=num_partitions,
-                replication_factor=replication_factor,
-                topic_configs={
-                    # Configurações específicas para Queue Mode/Share Groups
-                    "cleanup.policy": "delete",
-                    "retention.ms": "604800000",  # 7 dias
-                    "segment.ms": "604800000",  # 7 dias
-                    "compression.type": "gzip",
-                },
-            )
-
-            # Criar o tópico
-            fs = admin_client.create_topics([topic])
-            try:
-                # Aguardar a criação do tópico
-                for topic_name, f in fs.items():
-                    f.result()  # Aguardar a criação
-                    self.logger.info(
-                        f"Tópico {topic_name} criado com sucesso para Queue Mode"
-                    )
-            except Exception as e:
-                self.logger.error(f"Erro ao criar tópico {topic_name}: {e}")
-                return False
-
-            admin_client.close()
-            return True
-
-        except Exception as e:
-            self.logger.error(f"Erro na criação do tópico: {e}")
-            return False
+        self.config = BROKER_CONFIGS["kafka"].copy()
+        self.run_id = run_id  # Guardar run_id para usar nas mensagens
+        # Usar sempre o tópico padrão para compatibilidade com consumidor
+        # self.config["topic"] permanece como "bcc-tcc"
 
     def send_messages(
-        self, count: int, message_size: int, rps: Optional[int] = None, id_offset: int = 0
+        self, count: int, size: int, rps: Optional[int] = None, **kwargs
     ) -> bool:
         """
-        Envia mensagens para o Kafka.
-
+        Envia mensagens para o Kafka em rajada única
+        
         Args:
-            count: Número de mensagens
-            message_size: Tamanho de cada mensagem em bytes
-            rps: Rate limiting (mensagens por segundo)
-
-        Returns:
-            bool: True se bem-sucedido, False caso contrário
+            count: Número de mensagens para enviar
+            size: Tamanho de cada mensagem em bytes
+            rps: Rate limiting (não usado - sempre rajada)
         """
         try:
-            # Criar tópico para Queue Mode antes de enviar mensagens
-            if not self.create_topic_for_queue_mode():
-                self.logger.error("Falha ao criar tópico para Queue Mode")
-                return False
-
-            # Inicializar métricas
             self.metrics.start_timing()
-
+            
+            # Configuração simplificada do produtor
             producer = KafkaProducer(
                 bootstrap_servers=self.config["bootstrap_servers"],
                 value_serializer=lambda v: json.dumps(v).encode("utf-8"),
-                acks="all",  # Confirmação de todos os brokers
-                # Configurações específicas para Queue Mode
-                retries=3,
-                retry_backoff_ms=100,
-                max_in_flight_requests_per_connection=1,  # Garantir ordenação
+                acks=1,  # Aguardar confirmação do líder
+                compression_type=None,  # Sem compressão para comparação justa
+                batch_size=16384,  # Batch padrão
+                linger_ms=0,  # Enviar imediatamente
             )
-
-            message_content = "x" * (message_size - 10)
-
-            # Calcular intervalo de sleep para Rate Limiting
-            sleep_interval = 0
-            if rps and rps > 0:
-                sleep_interval = 1.0 / rps
-                self.logger.info(
-                    f"Rate Limiting ativado: {rps} RPS "
-                    f"(intervalo: {sleep_interval:.6f}s)"
-                )
-
+            
+            self.logger.info(f"✅ Produtor Kafka conectado. Enviando {count} mensagens...")
+            
+            # Gerar payload com tamanho especificado
+            payload = "x" * max(0, size - 50)  # Descontar overhead do JSON
+            
+            # Enviar mensagens em rajada
             for i in range(count):
-                # Usar offset para garantir IDs únicos entre múltiplos produtores
-                msg_id = str(id_offset + i)
-                payload = {"id": msg_id, "body": message_content}
-
-                # Enviar mensagem e aguardar confirmação
-                future = producer.send(self.config["topic"], value=payload)
+                msg_id = f"msg_{i+1}"
+                
+                # Mensagem com timestamp embutido e run_id
+                message = {
+                    "id": msg_id,
+                    "run_id": self.run_id,  # Identificador único da execução
+                    "timestamp": time.time(),  # Timestamp do envio
+                    "body": payload
+                }
+                
                 try:
-                    # Aguardar confirmação do broker
-                    future.get(timeout=10)
-
-                    # Capturar timestamp T1 APÓS a confirmação (precisão melhorada)
-                    self.metrics.record_send_time(msg_id, time.time())
-                    self.logger.info(
-                        f"Mensagem {msg_id} enviada e confirmada com "
-                        f"{message_size} bytes"
-                    )
-                except Exception as e:
-                    self.logger.error(f"Falha ao enviar mensagem {msg_id}: {e}")
-                    # Não registrar timestamp para mensagens que falharam
-
-                # Rate Limiting: aguardar o intervalo calculado
-                if sleep_interval > 0:
-                    time.sleep(sleep_interval)
-
-            producer.flush()
+                    # Enviar mensagem
+                    future = producer.send(self.config["topic"], value=message)
+                    
+                    # Log a cada 1000 mensagens
+                    if (i + 1) % 1000 == 0:
+                        self.logger.info(f"Enviadas {i+1}/{count} mensagens")
+                    
+                    # Registrar métrica
+                    self.metrics.messages_sent += 1
+                    
+                except KafkaError as e:
+                    self.logger.error(f"Erro ao enviar mensagem {msg_id}: {e}")
+                    continue
+            
+            # Garantir que todas as mensagens foram enviadas
+            producer.flush(timeout=30)
+            producer.close()
+            
+            # Finalizar métricas
             self.metrics.end_timing()
-
-            # Salvar métricas
-            additional_metrics = {}
-            if rps:
-                additional_metrics["target_rps"] = rps
-                duration = (
-                    self.metrics.end_time - self.metrics.start_time
-                    if self.metrics.start_time and self.metrics.end_time
-                    else 0
-                )
-                actual_rps = count / duration if duration > 0 else 0
-                additional_metrics["actual_rps"] = actual_rps
-
-            self.save_metrics(additional_metrics)
-            return True
-
+            self.metrics.save_summary()
+            
+            self.logger.info(f"✅ {self.metrics.messages_sent} mensagens enviadas com sucesso")
+            
+            return self.metrics.messages_sent == count
+            
         except Exception as e:
-            self.logger.error(f"Erro no envio de mensagens: {e}")
+            self.logger.error(f"❌ Erro no produtor Kafka: {e}")
             return False
-
-    def consume_messages(self, expected_count: int) -> bool:
-        """Não implementado para produtor."""
-        raise NotImplementedError("Consumo não implementado no produtor")
-
-    def get_leader(self) -> Optional[str]:
-        """Identifica o nó líder do cluster Kafka."""
-        return self.config["container_name"]  # Para cluster de 1 nó

@@ -1,5 +1,6 @@
 """
-Ponto de entrada principal do sistema de benchmark
+Ponto de entrada principal do sistema de benchmark TCC
+Objetivo: Comparar Baseline HTTP, RabbitMQ e Kafka em 3 portes
 """
 import argparse
 import sys
@@ -10,81 +11,46 @@ sys.path.insert(0, str(Path(__file__).parent / "src"))
 
 from src.core.logger import Logger
 from src.orchestration.benchmark import BenchmarkOrchestrator
-from src.orchestration.chaos import ChaosEngineer
 from src.brokers.baseline.server import BaselineServer
-import threading
 
 def main():
-    """Função principal"""
+    """Função principal - Benchmark TCC"""
     parser = argparse.ArgumentParser(
-        description='Sistema de Benchmark RabbitMQ vs Kafka',
+        description='TCC - Análise Comparativa: Apache Kafka vs RabbitMQ',
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog="""
-Parâmetros de entrada válidos:
-  --count: 5, 10, 15, 100, 1000, 10000, 100000
-  --producers: 1, 4, 16, 64
-  --consumers: 4, 64
-  --system: rabbitmq, kafka, baseline
+PORTES DE APLICAÇÃO (RPS):
+  pequeno:  100 requisições (aplicações corporativas internas, MVPs)
+  medio:    1.000 requisições (e-commerce estabelecido)
+  grande:   10.000 requisições (serviços globais)
 
-Métricas de saída:
-  T (Tempo de permanência na fila): Latência em segundos
-  V (Throughput): Mensagens por segundo
+MÉTRICAS COLETADAS:
+  • Latência: P50, P95, P99 (em segundos)
+  • Throughput: Mensagens por segundo
         """
     )
     
-    # Valores válidos conforme especificação do orientador
-    VALID_MESSAGE_COUNTS = [5, 10, 15, 100, 1000, 10000, 100000]
-    VALID_PRODUCERS = [1, 4, 16, 64]
-    VALID_CONSUMERS = [4, 64]
-    
-    # Argumentos principais
+    # Argumentos simplificados para o TCC
     parser.add_argument(
-        "--count", 
-        type=int, 
-        default=None,
-        choices=VALID_MESSAGE_COUNTS,
-        help=f"Quantidade de mensagens. Valores válidos: {', '.join(map(str, VALID_MESSAGE_COUNTS))}"
+        "--porte", 
+        choices=["pequeno", "medio", "grande"],
+        required=False,
+        help="Porte da aplicação (pequeno=100, medio=1000, grande=10000 mensagens)"
+    )
+    parser.add_argument(
+        "--system", 
+        choices=["kafka", "rabbitmq", "baseline"], 
+        required=False,
+        help="Sistema a ser testado: rabbitmq, kafka ou baseline"
     )
     parser.add_argument(
         "--size", 
         type=int, 
         default=200, 
-        help="Tamanho de cada mensagem (bytes)"
-    )
-    parser.add_argument(
-        "--producers", 
-        type=int, 
-        default=None,
-        choices=VALID_PRODUCERS,
-        help=f"Número de produtores simultâneos. Valores válidos: {', '.join(map(str, VALID_PRODUCERS))}"
-    )
-    parser.add_argument(
-        "--consumers", 
-        type=int, 
-        default=None,
-        choices=VALID_CONSUMERS,
-        help=f"Número de consumidores. Valores válidos: {', '.join(map(str, VALID_CONSUMERS))}"
-    )
-    parser.add_argument(
-        "--system", 
-        choices=["kafka", "rabbitmq", "baseline"], 
-        default=None,
-        help="Sistema a ser testado: rabbitmq, kafka ou baseline"
-    )
-    parser.add_argument(
-        "--rps", 
-        type=int, 
-        default=None, 
-        help="Rate Limiting (Requests Per Second) - Opcional"
+        help="Tamanho de cada mensagem em bytes (padrão: 200)"
     )
     
-    # Argumentos de Chaos Engineering
-    parser.add_argument("--chaos", action="store_true", 
-                       help="Executar experimento de tolerância a falhas (Chaos Engineering)")
-    parser.add_argument("--chaos-delay", type=int, default=10, 
-                       help="Delay em segundos antes de causar falha (padrão: 10)")
-    
-    # Argumentos de servidor
+    # Modo servidor para baseline
     parser.add_argument("--server", action="store_true", 
                        help="Executar servidor baseline HTTP")
     parser.add_argument("--port", type=int, default=5000, 
@@ -95,9 +61,9 @@ Métricas de saída:
     # Inicializar logger
     logger = Logger.get_logger("main")
     
-    # Modo servidor
+    # Modo servidor baseline
     if args.server:
-        logger.info("🚀 Iniciando servidor baseline HTTP...")
+        logger.info("🚀 Iniciando servidor baseline HTTP na porta {}...".format(args.port))
         server = BaselineServer()
         try:
             server.run(port=args.port)
@@ -105,100 +71,60 @@ Métricas de saída:
             logger.info("Servidor interrompido pelo usuário")
         return
     
-    # Modo Chaos Engineering (não precisa validar todos os parâmetros)
-    if args.chaos:
-        # Para chaos, apenas count, size e system são necessários
-        if args.count is None or args.system is None:
-            parser.error(
-                "Os parâmetros --count e --system são obrigatórios em modo de chaos."
-            )
-        # Usar valores padrão se não fornecidos
-        if args.producers is None:
-            args.producers = 1
-        if args.consumers is None:
-            args.consumers = 4
-        logger.info(f"🔥 Iniciando experimento de tolerância a falhas (Chaos Engineering):")
-        logger.info(f"   • Sistema: {args.system}")
-        logger.info(f"   • Mensagens: {args.count}")
-        logger.info(f"   • Tamanho: {args.size} bytes")
-        logger.info(f"   • Produtores: {args.producers}")
-        logger.info(f"   • Consumidores: {args.consumers}")
-        logger.info(f"   • Rate Limiting: {args.rps or 'unlimited'} RPS")
-        logger.info(f"   • Delay para falha: {args.chaos_delay}s")
-        
-        chaos_engineer = ChaosEngineer()
-        
-        if args.system in ["kafka", "rabbitmq"]:
-            chaos_engineer.run_chaos_experiment(
-                args.system, args.count, args.size, args.rps, args.chaos_delay
-            )
-        else:
-            logger.error(f"❌ Tecnologia {args.system} não suportada para experimento de chaos")
-        return
+    # Validar argumentos obrigatórios para benchmark
+    if not args.porte or not args.system:
+        parser.error("Os parâmetros --porte e --system são obrigatórios para executar o benchmark.")
     
-    # Validar obrigatoriedade dos parâmetros de benchmark (após verificar chaos)
-    required_values = {
-        "--count": args.count,
-        "--producers": args.producers,
-        "--consumers": args.consumers,
-        "--system": args.system,
+    # Mapear porte para número de mensagens
+    PORTE_MESSAGES = {
+        "pequeno": 100,
+        "medio": 1000,
+        "grande": 10000
     }
-    missing_args = [flag for flag, value in required_values.items() if value is None]
-    if missing_args:
-        parser.error(
-            f"Os parâmetros {', '.join(missing_args)} são obrigatórios em modo de benchmark."
-        )
     
-    # Modo benchmark normal
-    logger.info(f"🚀 Iniciando benchmark com configuração:")
-    logger.info(f"   • Sistema: {args.system}")
-    logger.info(f"   • Mensagens: {args.count:,}")
-    logger.info(f"   • Tamanho: {args.size} bytes")
-    logger.info(f"   • Produtores simultâneos: {args.producers}")
-    logger.info(f"   • Consumidores: {args.consumers}")
-    if args.rps:
-        logger.info(f"   • Rate Limiting: {args.rps} RPS")
-    logger.info(f"\n📊 Métricas que serão coletadas:")
-    logger.info(f"   • T (Tempo de permanência na fila): Latência em segundos")
-    logger.info(f"   • V (Throughput): Mensagens por segundo")
+    message_count = PORTE_MESSAGES[args.porte]
+    
+    # Log da configuração do benchmark
+    logger.info(f"\n🎯 BENCHMARK TCC - ANÁLISE COMPARATIVA")
+    logger.info(f"{'='*60}")
+    logger.info(f"   • Sistema: {args.system.upper()}")
+    logger.info(f"   • Porte: {args.porte.upper()} ({message_count:,} mensagens)")
+    logger.info(f"   • Tamanho da mensagem: {args.size} bytes")
+    logger.info(f"\n📊 Métricas a serem coletadas:")
+    logger.info(f"   • Latência: P50, P95, P99")
+    logger.info(f"   • Throughput: Mensagens/segundo")
+    logger.info(f"{'='*60}\n")
 
+    # Executar benchmark
     orchestrator = BenchmarkOrchestrator()
     
-    # Executar benchmark para o sistema especificado
     try:
         results = orchestrator.run_benchmark(
-            args.system, 
-            count=args.count, 
-            size=args.size, 
-            num_producers=args.producers, 
-            num_consumers=args.consumers, 
-            rps=args.rps
+            tech=args.system, 
+            count=message_count,
+            size=args.size,
+            porte=args.porte  # Passar o porte para facilitar identificação
         )
     except Exception as exc:
         logger.error(f"❌ Falha na execução do benchmark: {exc}")
         sys.exit(1)
     
-    # Exibir métricas principais
-    logger.info(f"\n{'='*60}")
-    logger.info(f"📊 RESULTADOS DO BENCHMARK - {args.system.upper()}")
-    logger.info(f"{'='*60}")
+    # Exibir resultados
     if results:
-        avg_latency = results.get("avg_latency", 0)
-        throughput = results.get("throughput", 0)
-        messages_processed = results.get("messages_sent", 0)
-        duration = results.get("duration", 0)
+        logger.info(f"\n{'='*60}")
+        logger.info(f"📊 RESULTADOS - {args.system.upper()} - PORTE {args.porte.upper()}")
+        logger.info(f"{'='*60}")
+        logger.info(f"   • Throughput: {results.get('throughput', 0):.2f} msg/s")
+        logger.info(f"   • Latência P50: {results.get('latency_50', 0):.6f} segundos")
+        logger.info(f"   • Latência P95: {results.get('latency_95', 0):.6f} segundos")
+        logger.info(f"   • Latência P99: {results.get('latency_99', 0):.6f} segundos")
+        logger.info(f"   • Mensagens processadas: {results.get('messages_processed', 0):,}")
+        logger.info(f"   • Duração total: {results.get('duration', 0):.2f} segundos")
+        logger.info(f"{'='*60}\n")
         
-        logger.info(f"   • T (Latência média): {avg_latency:.6f} segundos")
-        logger.info(f"   • V (Throughput): {throughput:.2f} mensagens/segundo")
-        logger.info(f"   • Mensagens processadas: {messages_processed:,}")
-        logger.info(f"   • Duração total: {duration:.2f} segundos")
-    
-    run_id = results.get("run_id") if results else None
-    run_path = f"logs/{args.system}/{run_id}/" if run_id else f"logs/{args.system}/"
-    logger.info(f"\n📁 Resultados detalhados salvos em: {run_path}")
-    logger.info("   • *_latency.csv - Latências individuais (T)")
-    logger.info("   • *_summary.csv - Resumo com throughput (V)")
-    logger.info(f"   • benchmark_results.csv - Resultados consolidados em logs/{args.system}/")
+        run_id = results.get("run_id")
+        if run_id:
+            logger.info(f"📁 Logs salvos em: logs/{args.system}/{run_id}/")
 
 if __name__ == "__main__":
     main()
