@@ -17,6 +17,7 @@ from ..brokers.rabbitmq.consumer import RabbitMQConsumer
 from ..brokers.rabbitmq.producer import RabbitMQProducer
 from ..core.config import LOGS_DIR
 from ..core.logger import Logger
+from ..core.percentile import calculate_percentile, calculate_metrics_statistics
 
 
 class BenchmarkOrchestrator:
@@ -190,26 +191,22 @@ class BenchmarkOrchestrator:
                 except Exception:
                     continue
         
-        # Calcular percentis se houver dados
+        # Usar o cálculo correto de métricas com percentis precisos
         if latencies:
-            latencies.sort()
-            n = len(latencies)
-            p50_idx = int(n * 0.50)
-            p95_idx = int(n * 0.95)
-            p99_idx = int(n * 0.99)
+            # Usar a função que implementa o método correto de percentis
+            metrics_stats = calculate_metrics_statistics(latencies, duration)
             
-            latency_50 = latencies[min(p50_idx, n-1)]
-            latency_95 = latencies[min(p95_idx, n-1)]
-            latency_99 = latencies[min(p99_idx, n-1)]
-            avg_latency = sum(latencies) / n
-            messages_processed = n
+            latency_50 = metrics_stats['p50']
+            latency_95 = metrics_stats['p95']
+            latency_99 = metrics_stats['p99']
+            avg_latency = metrics_stats['avg']
+            throughput = metrics_stats['throughput']
+            messages_processed = metrics_stats['count']
         else:
             # Valores padrão se não houver dados
             latency_50 = latency_95 = latency_99 = avg_latency = 0.0
             messages_processed = 0
-        
-        # Calcular throughput
-        throughput = messages_processed / duration if duration > 0 else 0
+            throughput = 0.0
         
         return {
             "messages_processed": messages_processed,

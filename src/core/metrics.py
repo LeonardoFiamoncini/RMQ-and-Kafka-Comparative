@@ -15,6 +15,7 @@ from typing import Any, Dict, List, Optional
 
 from .config import LOGS_DIR
 from .logger import Logger
+from .percentile import calculate_percentile
 
 
 class MetricsCollector:
@@ -155,15 +156,14 @@ class MetricsCollector:
                 latency_95 = config.get("latency_95", latency_avg)
                 latency_99 = config.get("latency_99", latency_avg)
             else:
-                # Calcular percentis se tivermos latências coletadas
+                # Calcular percentis usando o método correto
                 latencies = [lat for _, lat in self.latencies]
                 if latencies:
-                    latencies.sort()
-                    n = len(latencies)
-                    # CORRIGIDO: Usar (n-1) para evitar índice fora de range e calcular percentis corretamente
-                    latency_50 = latencies[int((n - 1) * 0.5)] if n > 0 else 0
-                    latency_95 = latencies[int((n - 1) * 0.95)] if n > 0 else 0
-                    latency_99 = latencies[int((n - 1) * 0.99)] if n > 0 else 0
+                    sorted_latencies = sorted(latencies)
+                    # Usar o método correto de cálculo de percentis (Hyndman & Fan método 7)
+                    latency_50 = calculate_percentile(sorted_latencies, 50)
+                    latency_95 = calculate_percentile(sorted_latencies, 95)
+                    latency_99 = calculate_percentile(sorted_latencies, 99)
                 else:
                     # Se não temos latências coletadas, usar avg_latency para todos os percentis
                     latency_50 = latency_95 = latency_99 = latency_avg
@@ -177,12 +177,12 @@ class MetricsCollector:
             latencies = [lat for _, lat in self.latencies]
 
             if latencies:
-                latencies.sort()
+                sorted_latencies = sorted(latencies)
                 n = len(latencies)
-                # CORRIGIDO: Usar (n-1) para evitar índice fora de range e calcular percentis corretamente
-                latency_50 = latencies[int((n - 1) * 0.5)] if n > 0 else 0
-                latency_95 = latencies[int((n - 1) * 0.95)] if n > 0 else 0
-                latency_99 = latencies[int((n - 1) * 0.99)] if n > 0 else 0
+                # Usar o método correto de cálculo de percentis (Hyndman & Fan método 7)
+                latency_50 = calculate_percentile(sorted_latencies, 50)
+                latency_95 = calculate_percentile(sorted_latencies, 95)
+                latency_99 = calculate_percentile(sorted_latencies, 99)
                 latency_avg = sum(latencies) / n
             else:
                 latency_50 = latency_95 = latency_99 = latency_avg = 0
