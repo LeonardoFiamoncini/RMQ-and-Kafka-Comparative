@@ -63,7 +63,7 @@ MÉTRICAS COLETADAS:
     
     # Modo servidor baseline
     if args.server:
-        logger.info("🚀 Iniciando servidor baseline HTTP na porta {}...".format(args.port))
+        logger.info("Iniciando servidor baseline HTTP na porta {}...".format(args.port))
         server = BaselineServer()
         try:
             server.run(port=args.port)
@@ -85,12 +85,12 @@ MÉTRICAS COLETADAS:
     message_count = PORTE_MESSAGES[args.porte]
     
     # Log da configuração do benchmark
-    logger.info(f"\n🎯 BENCHMARK TCC - ANÁLISE COMPARATIVA")
+    logger.info(f"\nBENCHMARK TCC - ANÁLISE COMPARATIVA")
     logger.info(f"{'='*60}")
     logger.info(f"   • Sistema: {args.system.upper()}")
     logger.info(f"   • Porte: {args.porte.upper()} ({message_count:,} mensagens)")
     logger.info(f"   • Tamanho da mensagem: {args.size} bytes")
-    logger.info(f"\n📊 Métricas a serem coletadas:")
+    logger.info(f"\nMétricas a serem coletadas:")
     logger.info(f"   • Latência: P50, P95, P99")
     logger.info(f"   • Throughput: Mensagens/segundo")
     logger.info(f"{'='*60}\n")
@@ -106,13 +106,13 @@ MÉTRICAS COLETADAS:
             porte=args.porte  # Passar o porte para facilitar identificação
         )
     except Exception as exc:
-        logger.error(f"❌ Falha na execução do benchmark: {exc}")
+        logger.error(f"Falha na execução do benchmark: {exc}")
         sys.exit(1)
     
     # Exibir resultados
     if results:
         logger.info(f"\n{'='*60}")
-        logger.info(f"📊 RESULTADOS - {args.system.upper()} - PORTE {args.porte.upper()}")
+        logger.info(f"RESULTADOS - {args.system.upper()} - PORTE {args.porte.upper()}")
         logger.info(f"{'='*60}")
         logger.info(f"   • Throughput: {results.get('throughput', 0):.2f} msg/s")
         logger.info(f"   • Latência P50: {results.get('latency_50', 0):.6f} segundos")
@@ -124,7 +124,7 @@ MÉTRICAS COLETADAS:
         
         run_id = results.get("run_id")
         if run_id:
-            logger.info(f"📁 Logs salvos em: logs/{args.system}/{run_id}/")
+            logger.info(f"Logs salvos em: logs/{args.system}/{run_id}/")
 
 if __name__ == "__main__":
     main()

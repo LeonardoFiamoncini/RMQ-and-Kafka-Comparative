@@ -16,7 +16,7 @@ command_exists() {
 }
 
 exit_on_failure() {
-    echo "❌ Erro crítico: $1"
+    echo "Erro crítico: $1"
     exit 1
 }
 
@@ -48,7 +48,7 @@ if [[ "$OS" == "linux" ]]; then
     echo "🔄 Atualizando pacotes do sistema..."
     sudo apt update && sudo apt upgrade -y
 elif [[ "$OS" == "macos" ]]; then
-    echo "ℹ️  macOS detectado - pulando atualização de pacotes do sistema"
+    echo "macOS detectado - pulando atualização de pacotes do sistema"
 fi
 
 # Instalar dependências Python baseado no OS
@@ -62,23 +62,23 @@ if [[ "$OS" == "linux" ]]; then
     
     for pkg in "${python_dependencies[@]}"; do
         if ! dpkg -s "$pkg" > /dev/null 2>&1; then
-            echo "🚀 Instalando $pkg..."
+            echo "Instalando $pkg..."
             sudo apt install -y --no-install-recommends "$pkg"
         else
-            echo "✅ $pkg já está instalado"
+            echo "$pkg já está instalado"
         fi
     done
 elif [[ "$OS" == "macos" ]]; then
     if ! command_exists python3; then
-        echo "❌ Python 3 não encontrado. Instale via Homebrew: brew install python3"
+        echo "Python 3 não encontrado. Instale via Homebrew: brew install python3"
         exit 1
     fi
-    echo "✅ Python 3 encontrado: $(python3 --version)"
+    echo "Python 3 encontrado: $(python3 --version)"
 fi
 
 if ! command_exists docker; then
     if [[ "$OS" == "linux" ]]; then
-        echo "🚀 Instalando Docker..."
+        echo "Instalando Docker..."
         sudo apt install -y ca-certificates curl gnupg lsb-release software-properties-common
         sudo mkdir -p /etc/apt/keyrings
         curl -fsSL https://download.docker.com/linux/ubuntu/gpg | \
@@ -91,34 +91,34 @@ if ! command_exists docker; then
         sudo apt update
         sudo apt install -y docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin
     elif [[ "$OS" == "macos" ]]; then
-        echo "❌ Docker não encontrado no macOS."
+        echo "Docker não encontrado no macOS."
         echo "   Instale Docker Desktop: https://www.docker.com/products/docker-desktop"
         exit 1
     fi
 else
-    echo "✅ Docker já está instalado: $(docker --version)"
+    echo "Docker já está instalado: $(docker --version)"
 fi
 
 if ! docker compose version > /dev/null 2>&1; then
-    echo "⚠️ Docker Compose (plugin) não funcional - execute manualmente: sudo apt install docker-compose-plugin"
+    echo "Docker Compose (plugin) não funcional - execute manualmente: sudo apt install docker-compose-plugin"
 fi
 
 # Configurar permissões Docker (apenas Linux)
 if [[ "$OS" == "linux" ]]; then
     if ! getent group docker > /dev/null; then
-        echo "🚀 Criando grupo docker..."
+        echo "Criando grupo docker..."
         sudo groupadd docker
     fi
 
     if ! groups "$USER" | grep -q '\bdocker\b'; then
-        echo "🚀 Adicionando usuário ao grupo docker..."
+        echo "Adicionando usuário ao grupo docker..."
         sudo usermod -aG docker "$USER"
-        echo "⚠️ Reinicie a sessão para aplicar permissões do Docker"
+        echo "Reinicie a sessão para aplicar permissões do Docker"
     else
-        echo "✅ Usuário já está no grupo docker"
+        echo "Usuário já está no grupo docker"
     fi
 elif [[ "$OS" == "macos" ]]; then
-    echo "ℹ️  macOS: Permissões Docker gerenciadas pelo Docker Desktop"
+    echo "macOS: Permissões Docker gerenciadas pelo Docker Desktop"
 fi
 
 venv_dir="venv"
@@ -136,10 +136,10 @@ pip install --upgrade pip
 
 # Usar requirements.txt para garantir versões fixas e reprodutibilidade
 if [ -f "requirements.txt" ]; then
-    echo "➡️ Instalando dependências de requirements.txt (versões fixas para reprodutibilidade)..."
+    echo "Instalando dependências de requirements.txt (versões fixas para reprodutibilidade)..."
     pip install --no-cache-dir -r requirements.txt
 else
-    echo "⚠️ Arquivo requirements.txt não encontrado. Instalando dependências básicas..."
+    echo "Arquivo requirements.txt não encontrado. Instalando dependências básicas..."
     requirements=(
         flask==3.1.1
         werkzeug==3.0.1
@@ -157,12 +157,12 @@ else
         flake8==7.1.1
         pytest==8.3.3
     )
-    echo "➡️ Instalando: ${requirements[*]}"
+    echo "Instalando: ${requirements[*]}"
     pip install --no-cache-dir "${requirements[@]}"
 fi
 
 echo "=============================="
-echo "✅ Ambiente de desenvolvimento configurado com sucesso!"
+echo "Ambiente de desenvolvimento configurado com sucesso!"
 echo ""
 echo "📋 Próximos passos:"
 echo "   1. Ativar ambiente virtual: source venv/bin/activate"
@@ -173,8 +173,8 @@ echo "   3. Iniciar containers: docker compose up -d"
 echo "   4. Aguardar inicialização: sleep 60"
 echo "   5. Verificar status: docker compose ps"
 echo ""
-echo "📚 Documentação completa: docs/README.md"
-echo "🔧 Versões garantidas para reprodutibilidade:"
+echo "Documentação completa: docs/README.md"
+echo "Versões garantidas para reprodutibilidade:"
 echo "   - RabbitMQ: 4.1.1"
 echo "   - Apache Kafka: 4.0.0"
 echo "   - Python: 3.12+"

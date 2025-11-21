@@ -1,6 +1,6 @@
-# 🚀 Benchmark TCC - Apache Kafka vs RabbitMQ
+# Benchmark TCC - Apache Kafka vs RabbitMQ
 
-## 📖 Descrição
+## Descrição
 
 Implementação prática para o TCC **"APACHE KAFKA E RABBITMQ: UMA ANÁLISE COMPARATIVA ENTRE SISTEMAS DE MENSAGERIA EM APLICAÇÕES DE DIFERENTES PORTES"**.
 
@@ -9,7 +9,7 @@ Este projeto compara o desempenho de:
 - **RabbitMQ 4.1.1**: Com Quorum Queues
 - **Apache Kafka 4.0**: Com KRaft mode (sem Zookeeper)
 
-## 🎯 Objetivos
+## Objetivos
 
 1. Avaliar latência (P50/P95/P99) e throughput
 2. Comparar desempenho em 3 portes de aplicação:
@@ -18,14 +18,14 @@ Este projeto compara o desempenho de:
    - **Grande**: 10.000 mensagens (serviços globais)
 3. Fornecer dados objetivos para escolha de tecnologia
 
-## 🛠️ Pré-requisitos
+## Pré-requisitos
 
 - Docker e Docker Compose
 - Python 3.10+
 - 4GB RAM mínimo
 - 10GB espaço em disco
 
-## 📦 Instalação
+## Instalação
 
 ### 1. Clone o repositório
 
@@ -57,7 +57,7 @@ Aguarde os containers ficarem saudáveis:
 docker ps
 ```
 
-## 🔬 Executando os Testes
+## Executando os Testes
 
 ### Opção 1: Executar todos os cenários (Recomendado)
 
@@ -99,7 +99,7 @@ Após executar os testes, gere os gráficos:
 python3 gerar_graficos_tcc.py
 ```
 
-## 📊 Resultados
+## Resultados
 
 Os resultados são salvos em:
 
@@ -111,7 +111,7 @@ Os resultados são salvos em:
   - `summary_matrix_*.png` - Matriz resumo
   - `summary_table_*.txt` - Tabela com todos os resultados
 
-## 📈 Métricas Coletadas
+## Métricas Coletadas
 
 Para cada cenário, são coletadas:
 
@@ -120,7 +120,7 @@ Para cada cenário, são coletadas:
 - **Latência P95**: 95% das mensagens com latência menor que este valor
 - **Latência P99**: 99% das mensagens com latência menor que este valor
 
-## 🏗️ Estrutura do Projeto
+## Estrutura do Projeto
 
 ```
 .
@@ -139,13 +139,13 @@ Para cada cenário, são coletadas:
 └── executar_todos_cenarios_tcc.sh  # Script de execução completa
 ```
 
-## 🐳 Serviços Docker
+## Serviços Docker
 
 - **RabbitMQ**: Porta 5672 (AMQP) e 15672 (Management)
 - **Kafka**: Porta 9092 (Broker)
 - **Baseline**: Porta 5000 (HTTP)
 
-## ⚙️ Configurações
+## Configurações
 
 As configurações dos brokers estão em `src/core/config.py`:
 
@@ -170,7 +170,7 @@ BROKER_CONFIGS = {
 }
 ```
 
-## 🔍 Troubleshooting
+## Troubleshooting
 
 ### Containers não iniciam
 
@@ -204,17 +204,17 @@ rm -rf logs/*
 docker compose down -v
 ```
 
-## 📚 Referências
+## Referências
 
 - **RabbitMQ**: https://www.rabbitmq.com/docs
 - **Apache Kafka**: https://kafka.apache.org/documentation/
 - **Docker Compose**: https://docs.docker.com/compose/
 
-## 🤝 Contribuições
+## Contribuições
 
 Este projeto foi desenvolvido como parte de um Trabalho de Conclusão de Curso (TCC) em Ciência da Computação.
 
-## ✉️ Contato
+## Contato
 
 Para dúvidas ou sugestões sobre este p
 - **E-mail**: leonardosfiamoncini@gmail.com

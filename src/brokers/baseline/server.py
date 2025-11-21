@@ -55,7 +55,7 @@ class BaselineServer:
         if port is None:
             port = self.port
             
-        self.logger.info(f"🚀 Servidor Baseline HTTP iniciando na porta {port}...")
+        self.logger.info(f"Servidor Baseline HTTP iniciando na porta {port}...")
         
         # Configurar Flask para modo produção
         self.app.run(

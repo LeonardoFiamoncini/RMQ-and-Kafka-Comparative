@@ -29,4 +29,4 @@ docker exec kafka ${KAFKA_BIN}/kafka-topics.sh \
     --config segment.ms=10000 \
     2>/dev/null || true
 
-echo "✅ Tópico Kafka limpo e recriado"
+echo "Tópico Kafka limpo e recriado"

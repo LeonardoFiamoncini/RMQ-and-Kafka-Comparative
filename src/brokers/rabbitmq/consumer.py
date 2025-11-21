@@ -67,7 +67,7 @@ class RabbitMQConsumer(BaseBroker):
             # Configurar QoS 
             self.channel.basic_qos(prefetch_count=100)
             
-            self.logger.info(f"✅ Consumidor RabbitMQ conectado à fila {self.config['queue']}")
+            self.logger.info(f"Consumidor RabbitMQ conectado à fila {self.config['queue']}")
             
             # Callback para processar mensagens
             def callback(ch, method, properties, body):
@@ -102,7 +102,7 @@ class RabbitMQConsumer(BaseBroker):
                     
                     # Parar se recebemos todas as mensagens
                     if self.received_count >= self.expected_count:
-                        self.logger.info(f"✅ Recebidas {self.received_count} mensagens esperadas. Finalizando consumo.")
+                        self.logger.info(f"Recebidas {self.received_count} mensagens esperadas. Finalizando consumo.")
                         ch.stop_consuming()
                         
                 except Exception as e:
@@ -149,10 +149,10 @@ class RabbitMQConsumer(BaseBroker):
             self.metrics.save_summary()
             
             # Log resumo
-            self.logger.info(f"✅ Consumo finalizado: {self.received_count} mensagens recebidas")
+            self.logger.info(f"Consumo finalizado: {self.received_count} mensagens recebidas")
             
             return self.received_count >= self.expected_count
             
         except Exception as e:
-            self.logger.error(f"❌ Erro no consumidor RabbitMQ: {e}")
+            self.logger.error(f"Erro no consumidor RabbitMQ: {e}")
             return False

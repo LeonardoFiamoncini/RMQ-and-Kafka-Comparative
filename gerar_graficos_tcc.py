@@ -39,7 +39,7 @@ def load_benchmark_data():
     for tech in ['baseline', 'rabbitmq', 'kafka']:
         csv_file = LOGS_DIR / tech / "benchmark_results.csv"
         if not csv_file.exists():
-            print(f"⚠️ Arquivo não encontrado: {csv_file}")
+            print(f"Arquivo não encontrado: {csv_file}")
             continue
         
         with open(csv_file, 'r') as f:
@@ -116,7 +116,7 @@ def plot_throughput_comparison(data):
     plt.tight_layout()
     filename = PLOTS_DIR / f"throughput_comparison_{datetime.now().strftime('%Y%m%d_%H%M%S')}.png"
     plt.savefig(filename, dpi=150, bbox_inches='tight')
-    print(f"✅ Gráfico salvo: {filename}")
+    print(f"Gráfico salvo: {filename}")
     plt.close()
 
 def plot_latency_comparison(data):
@@ -175,7 +175,7 @@ def plot_latency_comparison(data):
     plt.tight_layout()
     filename = PLOTS_DIR / f"latency_comparison_{datetime.now().strftime('%Y%m%d_%H%M%S')}.png"
     plt.savefig(filename, dpi=150, bbox_inches='tight')
-    print(f"✅ Gráfico salvo: {filename}")
+    print(f"Gráfico salvo: {filename}")
     plt.close()
 
 def plot_summary_matrix(data):
@@ -223,7 +223,7 @@ def plot_summary_matrix(data):
     plt.tight_layout()
     filename = PLOTS_DIR / f"summary_matrix_{datetime.now().strftime('%Y%m%d_%H%M%S')}.png"
     plt.savefig(filename, dpi=150, bbox_inches='tight')
-    print(f"✅ Gráfico salvo: {filename}")
+    print(f"Gráfico salvo: {filename}")
     plt.close()
 
 def generate_summary_table(data):
@@ -274,15 +274,15 @@ def generate_summary_table(data):
                           key=lambda t: data[t][porte]['latency_50'] if data[t][porte]['latency_50'] > 0 else float('inf'))
             f.write(f"Menor latência P50 em porte {porte}: {best_tech.upper()}\n")
     
-    print(f"✅ Tabela resumo salva: {filename}")
+    print(f"Tabela resumo salva: {filename}")
 
 def main():
     """Função principal"""
-    print("\n📊 GERADOR DE GRÁFICOS - TCC BENCHMARK")
+    print("\nGERADOR DE GRÁFICOS - TCC BENCHMARK")
     print("=" * 50)
     
     # Carregar dados
-    print("📂 Carregando dados dos benchmarks...")
+    print("Carregando dados dos benchmarks...")
     data = load_benchmark_data()
     
     # Verificar se há dados
@@ -294,19 +294,19 @@ def main():
                 break
     
     if not has_data:
-        print("⚠️ Nenhum dado de benchmark encontrado!")
+        print("Nenhum dado de benchmark encontrado!")
         print("Execute primeiro: ./executar_todos_cenarios_tcc.sh")
         return
     
     # Gerar gráficos
-    print("\n🎨 Gerando visualizações...")
+    print("\nGerando visualizações...")
     
     plot_throughput_comparison(data)
     plot_latency_comparison(data)
     plot_summary_matrix(data)
     generate_summary_table(data)
     
-    print(f"\n✅ Todos os gráficos foram gerados em: {PLOTS_DIR}")
+    print(f"\nTodos os gráficos foram gerados em: {PLOTS_DIR}")
     print("\nGráficos gerados:")
     print("  • throughput_comparison_*.png - Comparação de throughput")
     print("  • latency_comparison_*.png - Comparação de latências")

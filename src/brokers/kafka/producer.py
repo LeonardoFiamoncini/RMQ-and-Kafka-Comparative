@@ -49,7 +49,7 @@ class KafkaProducerBroker(BaseBroker):
                 max_in_flight_requests_per_connection=5,  # Permitir paralelismo
             )
             
-            self.logger.info(f"✅ Produtor Kafka conectado. Enviando {count} mensagens...")
+            self.logger.info(f"Produtor Kafka conectado. Enviando {count} mensagens...")
             
             # Gerar payload com tamanho especificado
             payload = "x" * max(0, size - 50)  # Descontar overhead do JSON
@@ -95,7 +95,7 @@ class KafkaProducerBroker(BaseBroker):
                 except Exception as e:
                     self.logger.warning(f"Erro ao confirmar envio: {e}")
             
-            self.logger.info(f"✅ {success_count}/{count} mensagens confirmadas")
+            self.logger.info(f"{success_count}/{count} mensagens confirmadas")
             
             producer.close()
             
@@ -103,10 +103,10 @@ class KafkaProducerBroker(BaseBroker):
             self.metrics.end_timing()
             self.metrics.save_summary()
             
-            self.logger.info(f"✅ {self.metrics.messages_sent} mensagens enviadas com sucesso")
+            self.logger.info(f"{self.metrics.messages_sent} mensagens enviadas com sucesso")
             
             return self.metrics.messages_sent == count
             
         except Exception as e:
-            self.logger.error(f"❌ Erro no produtor Kafka: {e}")
+            self.logger.error(f"Erro no produtor Kafka: {e}")
             return False

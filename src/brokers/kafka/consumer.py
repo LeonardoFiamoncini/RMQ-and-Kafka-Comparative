@@ -58,7 +58,7 @@ class KafkaConsumerBroker(BaseBroker):
                 request_timeout_ms=31000,
             )
             
-            self.logger.info(f"✅ Consumidor Kafka conectado ao tópico {self.config['topic']}")
+            self.logger.info(f"Consumidor Kafka conectado ao tópico {self.config['topic']}")
             
             # Subscribe to the topic
             consumer.subscribe([self.config["topic"]])
@@ -161,16 +161,16 @@ class KafkaConsumerBroker(BaseBroker):
             # Log resumo
             if latencies:
                 avg_latency = sum(latencies) / len(latencies)
-                self.logger.info(f"📊 Latência média: {avg_latency:.3f}s")
+                self.logger.info(f"Latência média: {avg_latency:.3f}s")
                 
                 # Alertar se latência média está muito alta
                 if avg_latency > 1.0:
-                    self.logger.warning(f"⚠️ Latência média muito alta: {avg_latency:.3f}s - possível consumo de mensagens antigas!")
+                    self.logger.warning(f"Latência média muito alta: {avg_latency:.3f}s - possível consumo de mensagens antigas!")
             
-            self.logger.info(f"✅ Consumo finalizado: {valid_messages} mensagens válidas recebidas de {received_count} total")
+            self.logger.info(f"Consumo finalizado: {valid_messages} mensagens válidas recebidas de {received_count} total")
             
             return valid_messages >= expected_count
             
         except Exception as e:
-            self.logger.error(f"❌ Erro no consumidor Kafka: {e}")
+            self.logger.error(f"Erro no consumidor Kafka: {e}")
             return False

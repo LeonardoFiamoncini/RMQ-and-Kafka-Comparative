@@ -45,7 +45,7 @@ class BenchmarkOrchestrator:
         Returns:
             Dicionário com métricas coletadas
         """
-        self.logger.info(f"📊 Iniciando benchmark {tech.upper()} - Porte {porte.upper()}")
+        self.logger.info(f"Iniciando benchmark {tech.upper()} - Porte {porte.upper()}")
         self.logger.info(f"   • Mensagens: {count:,}")
         self.logger.info(f"   • Tamanho: {size} bytes")
         self.logger.info(f"   • Modo: Rajada única (burst)")
@@ -119,7 +119,7 @@ class BenchmarkOrchestrator:
             consumer_thread.join(timeout=60)
             
             if not consumer_results["success"]:
-                self.logger.warning(f"⚠️ Consumidor teve problemas: {consumer_results.get('error', 'Unknown')}")
+                self.logger.warning(f"Consumidor teve problemas: {consumer_results.get('error', 'Unknown')}")
         
         end_time = time.time()
         total_duration = end_time - start_time
@@ -144,7 +144,7 @@ class BenchmarkOrchestrator:
         self._save_benchmark_results(tech, porte, metrics)
         
         # Log dos resultados principais
-        self.logger.info(f"✅ Benchmark concluído:")
+        self.logger.info(f"Benchmark concluído:")
         self.logger.info(f"   • Throughput: {metrics['throughput']:.2f} msg/s")
         self.logger.info(f"   • Latência P50: {metrics['latency_50']:.6f} s")
         self.logger.info(f"   • Latência P95: {metrics['latency_95']:.6f} s")
@@ -248,4 +248,4 @@ class BenchmarkOrchestrator:
                 writer.writeheader()
             writer.writerow(row_data)
         
-        self.logger.info(f"📁 Resultados salvos em: {csv_file}")
+        self.logger.info(f"Resultados salvos em: {csv_file}")

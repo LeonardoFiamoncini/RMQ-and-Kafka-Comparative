@@ -57,7 +57,7 @@ class RabbitMQProducer(BaseBroker):
                 }
             )
             
-            self.logger.info(f"✅ Produtor RabbitMQ conectado. Enviando {count} mensagens...")
+            self.logger.info(f"Produtor RabbitMQ conectado. Enviando {count} mensagens...")
             
             # Gerar payload com tamanho especificado
             payload = "x" * max(0, size - 50)  # Descontar overhead do JSON
@@ -102,10 +102,10 @@ class RabbitMQProducer(BaseBroker):
             self.metrics.end_timing()
             self.metrics.save_summary()
             
-            self.logger.info(f"✅ {self.metrics.messages_sent} mensagens enviadas com sucesso")
+            self.logger.info(f"{self.metrics.messages_sent} mensagens enviadas com sucesso")
             
             return self.metrics.messages_sent == count
             
         except Exception as e:
-            self.logger.error(f"❌ Erro no produtor RabbitMQ: {e}")
+            self.logger.error(f"Erro no produtor RabbitMQ: {e}")
             return False

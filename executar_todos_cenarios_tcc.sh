@@ -14,7 +14,7 @@ BLUE='\033[0;34m'
 NC='\033[0m' # No Color
 
 echo -e "${BLUE}================================================${NC}"
-echo -e "${BLUE}🚀 EXECUTANDO TODOS OS CENÁRIOS DO TCC${NC}"
+echo -e "${BLUE}EXECUTANDO TODOS OS CENÁRIOS DO TCC${NC}"
 echo -e "${BLUE}================================================${NC}"
 
 # Limpar logs antigos
@@ -73,17 +73,17 @@ kill $SERVER_PID || true
 
 # Gerar gráficos
 echo -e "\n${BLUE}================================================${NC}"
-echo -e "${BLUE}📊 GERANDO GRÁFICOS${NC}"
+echo -e "${BLUE}GERANDO GRÁFICOS${NC}"
 echo -e "${BLUE}================================================${NC}"
 python3 gerar_graficos_tcc.py
 
-echo -e "\n${GREEN}✅ EXECUÇÃO COMPLETA!${NC}"
+echo -e "\n${GREEN}EXECUÇÃO COMPLETA!${NC}"
 echo -e "${GREEN}Resultados salvos em:${NC}"
 echo -e "  • Logs: logs/"
 echo -e "  • Gráficos: logs/plots/"
 
 # Mostrar resumo final
 if [ -f logs/plots/summary_table_*.txt ]; then
-    echo -e "\n${BLUE}📋 RESUMO DOS RESULTADOS:${NC}"
+    echo -e "\n${BLUE}RESUMO DOS RESULTADOS:${NC}"
     cat logs/plots/summary_table_*.txt | head -40
 fi

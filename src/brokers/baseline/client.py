@@ -43,7 +43,7 @@ class BaselineClient(BaseBroker):
             except requests.exceptions.RequestException:
                 self.logger.info("Servidor ainda iniciando, continuando mesmo assim...")
             
-            self.logger.info(f"✅ Cliente Baseline conectado. Enviando {count} requisições...")
+            self.logger.info(f"Cliente Baseline conectado. Enviando {count} requisições...")
             
             # Gerar payload com tamanho especificado
             payload = "x" * max(0, size - 50)  # Descontar overhead do JSON
@@ -94,10 +94,10 @@ class BaselineClient(BaseBroker):
             self.metrics.save_latencies()
             self.metrics.save_summary()
             
-            self.logger.info(f"✅ {self.metrics.messages_sent} requisições enviadas com sucesso")
+            self.logger.info(f"{self.metrics.messages_sent} requisições enviadas com sucesso")
             
             return self.metrics.messages_sent == count
             
         except Exception as e:
-            self.logger.error(f"❌ Erro no cliente Baseline: {e}")
+            self.logger.error(f"Erro no cliente Baseline: {e}")
             return False
