@@ -77,9 +77,9 @@ MÉTRICAS COLETADAS:
     
     # Mapear porte para número de mensagens
     PORTE_MESSAGES = {
-        "pequeno": 100,
-        "medio": 1000,
-        "grande": 10000
+        "pequeno": 100,     # Aplicações corporativas internas
+        "medio": 1000,      # Plataformas estabelecidas
+        "grande": 10000     # Serviços globais
     }
     
     message_count = PORTE_MESSAGES[args.porte]

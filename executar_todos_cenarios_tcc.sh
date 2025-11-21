@@ -33,6 +33,11 @@ sleep 10
 # Verificar se containers estão rodando
 docker ps
 
+# Limpar tópico Kafka para evitar mensagens antigas
+echo -e "${YELLOW}Limpando tópico Kafka...${NC}"
+chmod +x scripts/clear_kafka_topic.sh
+./scripts/clear_kafka_topic.sh
+
 # Ativar ambiente virtual
 source venv/bin/activate
 

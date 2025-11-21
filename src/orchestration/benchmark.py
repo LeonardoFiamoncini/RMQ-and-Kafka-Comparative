@@ -82,8 +82,10 @@ class BenchmarkOrchestrator:
             consumer_thread = Thread(target=run_consumer, daemon=False)
             consumer_thread.start()
             
-            # Aguardar consumidor conectar (tempo muito mínimo)
-            time.sleep(0.2)
+            # Aguardar consumidor conectar - tempo mínimo para não adicionar latência artificial
+            # RabbitMQ e Kafka precisam de tempo para se conectar
+            wait_time = 1.0  # Tempo uniforme para todos
+            time.sleep(wait_time)
 
         # Executar produtor (ou cliente baseline)
         self.logger.info(f"   • Enviando {count} mensagens em rajada...")

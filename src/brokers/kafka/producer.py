@@ -38,14 +38,15 @@ class KafkaProducerBroker(BaseBroker):
         try:
             self.metrics.start_timing()
             
-            # Configuração simplificada do produtor
+            # Configuração balanceada do produtor
             producer = KafkaProducer(
                 bootstrap_servers=self.config["bootstrap_servers"],
                 value_serializer=lambda v: json.dumps(v).encode("utf-8"),
-                acks=1,  # Aguardar confirmação do líder
+                acks=1,  # Aguardar confirmação do líder para garantir entrega
                 compression_type=None,  # Sem compressão para comparação justa
-                batch_size=16384,  # Batch padrão
-                linger_ms=0,  # Enviar imediatamente
+                batch_size=1024,  # Batch pequeno para reduzir latência
+                linger_ms=10,  # Pequeno delay para permitir batching mínimo
+                max_in_flight_requests_per_connection=5,  # Permitir paralelismo
             )
             
             self.logger.info(f"✅ Produtor Kafka conectado. Enviando {count} mensagens...")
@@ -54,6 +55,7 @@ class KafkaProducerBroker(BaseBroker):
             payload = "x" * max(0, size - 50)  # Descontar overhead do JSON
             
             # Enviar mensagens em rajada
+            futures = []
             for i in range(count):
                 msg_id = f"msg_{i+1}"
                 
@@ -66,8 +68,9 @@ class KafkaProducerBroker(BaseBroker):
                 }
                 
                 try:
-                    # Enviar mensagem
+                    # Enviar mensagem de forma assíncrona
                     future = producer.send(self.config["topic"], value=message)
+                    futures.append(future)
                     
                     # Log a cada 1000 mensagens
                     if (i + 1) % 1000 == 0:
@@ -82,6 +85,18 @@ class KafkaProducerBroker(BaseBroker):
             
             # Garantir que todas as mensagens foram enviadas
             producer.flush(timeout=30)
+            
+            # Verificar se todas as mensagens foram enviadas com sucesso
+            success_count = 0
+            for future in futures:
+                try:
+                    future.get(timeout=1)
+                    success_count += 1
+                except Exception as e:
+                    self.logger.warning(f"Erro ao confirmar envio: {e}")
+            
+            self.logger.info(f"✅ {success_count}/{count} mensagens confirmadas")
+            
             producer.close()
             
             # Finalizar métricas
