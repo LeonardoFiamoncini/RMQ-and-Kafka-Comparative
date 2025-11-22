@@ -1,5 +1,5 @@
 # ============================================================================
-# Docker Compose - TCC Benchmark Simplificado
+# Docker Compose - TCC Benchmark
 # ============================================================================
 # Configuração para reprodutibilidade e simplicidade:
 # - RabbitMQ 4.1.1 com Quorum Queue (1 nó)
@@ -8,7 +8,7 @@
 
 services:
   # RabbitMQ Single Node
-  # Versão: 4.1.1 (obrigatória para o TCC)
+  # Versão: 4.1.1
   rabbitmq:
     image: rabbitmq:4.1.1-management
     container_name: rabbitmq
@@ -29,7 +29,7 @@ services:
       start_period: 30s
 
   # Apache Kafka Single Node com KRaft (sem Zookeeper)
-  # Versão: 4.0.0 (obrigatória para o TCC)
+  # Versão: 4.0.0
   kafka:
     image: apache/kafka:4.0.0
     container_name: kafka
