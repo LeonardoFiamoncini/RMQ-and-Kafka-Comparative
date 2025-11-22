@@ -151,8 +151,7 @@ class MetricsCollector:
             duration = config.get("duration", 0)
             
             # Usar percentis passados no config se disponíveis
-            if "latency_50" in config and "latency_95" in config and "latency_99" in config:
-                latency_50 = config.get("latency_50", latency_avg)
+            if "latency_95" in config and "latency_99" in config:
                 latency_95 = config.get("latency_95", latency_avg)
                 latency_99 = config.get("latency_99", latency_avg)
             else:
@@ -161,12 +160,11 @@ class MetricsCollector:
                 if latencies:
                     sorted_latencies = sorted(latencies)
                     # Usar o método correto de cálculo de percentis (Hyndman & Fan método 7)
-                    latency_50 = calculate_percentile(sorted_latencies, 50)
                     latency_95 = calculate_percentile(sorted_latencies, 95)
                     latency_99 = calculate_percentile(sorted_latencies, 99)
                 else:
                     # Se não temos latências coletadas, usar avg_latency para todos os percentis
-                    latency_50 = latency_95 = latency_99 = latency_avg
+                    latency_95 = latency_99 = latency_avg
         else:
             # Calcular métricas a partir das latências coletadas (comportamento antigo)
             duration = (
@@ -180,12 +178,11 @@ class MetricsCollector:
                 sorted_latencies = sorted(latencies)
                 n = len(latencies)
                 # Usar o método correto de cálculo de percentis (Hyndman & Fan método 7)
-                latency_50 = calculate_percentile(sorted_latencies, 50)
                 latency_95 = calculate_percentile(sorted_latencies, 95)
                 latency_99 = calculate_percentile(sorted_latencies, 99)
                 latency_avg = sum(latencies) / n
             else:
-                latency_50 = latency_95 = latency_99 = latency_avg = 0
+                latency_95 = latency_99 = latency_avg = 0
 
             throughput = len(self.latencies) / duration if duration > 0 else 0
 
@@ -205,7 +202,6 @@ class MetricsCollector:
                         "num_consumers",
                         "rps",
                         "latency_avg",
-                        "latency_50",
                         "latency_95",
                         "latency_99",
                         "throughput",
@@ -224,7 +220,6 @@ class MetricsCollector:
                     config.get("num_consumers", 1),
                     config.get("rps", "unlimited"),
                     round(latency_avg, 6),
-                    round(latency_50, 6),
                     round(latency_95, 6),
                     round(latency_99, 6),
                     round(throughput, 2),

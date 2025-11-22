@@ -146,7 +146,6 @@ class BenchmarkOrchestrator:
         # Log dos resultados principais
         self.logger.info(f"Benchmark concluído:")
         self.logger.info(f"   • Throughput: {metrics['throughput']:.2f} msg/s")
-        self.logger.info(f"   • Latência P50: {metrics['latency_50']:.6f} s")
         self.logger.info(f"   • Latência P95: {metrics['latency_95']:.6f} s")
         self.logger.info(f"   • Latência P99: {metrics['latency_99']:.6f} s")
         
@@ -196,7 +195,6 @@ class BenchmarkOrchestrator:
             # Usar a função que implementa o método correto de percentis
             metrics_stats = calculate_metrics_statistics(latencies, duration)
             
-            latency_50 = metrics_stats['p50']
             latency_95 = metrics_stats['p95']
             latency_99 = metrics_stats['p99']
             avg_latency = metrics_stats['avg']
@@ -204,7 +202,7 @@ class BenchmarkOrchestrator:
             messages_processed = metrics_stats['count']
         else:
             # Valores padrão se não houver dados
-            latency_50 = latency_95 = latency_99 = avg_latency = 0.0
+            latency_95 = latency_99 = avg_latency = 0.0
             messages_processed = 0
             throughput = 0.0
         
@@ -212,7 +210,6 @@ class BenchmarkOrchestrator:
             "messages_processed": messages_processed,
             "throughput": throughput,
             "avg_latency": avg_latency,
-            "latency_50": latency_50,
             "latency_95": latency_95,
             "latency_99": latency_99
         }
@@ -233,7 +230,6 @@ class BenchmarkOrchestrator:
             "messages_requested": results.get("messages_requested", 0),
             "messages_processed": results.get("messages_processed", 0),
             "throughput": results.get("throughput", 0),
-            "latency_50": results.get("latency_50", 0),
             "latency_95": results.get("latency_95", 0),
             "latency_99": results.get("latency_99", 0),
             "avg_latency": results.get("avg_latency", 0),

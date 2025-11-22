@@ -80,7 +80,6 @@ def calculate_metrics_statistics(latencies: List[float], duration: float) -> dic
     if not latencies or duration <= 0:
         return {
             'throughput': 0.0,
-            'p50': 0.0,
             'p95': 0.0,
             'p99': 0.0,
             'p99_9': 0.0,
@@ -99,7 +98,6 @@ def calculate_metrics_statistics(latencies: List[float], duration: float) -> dic
     throughput = n / duration
     
     # Percentis usando o método correto
-    p50 = calculate_percentile(sorted_latencies, 50)    # Mediana
     p95 = calculate_percentile(sorted_latencies, 95)    # 95º percentil
     p99 = calculate_percentile(sorted_latencies, 99)    # 99º percentil
     p99_9 = calculate_percentile(sorted_latencies, 99.9) # 99.9º percentil (tail latency)
@@ -111,7 +109,6 @@ def calculate_metrics_statistics(latencies: List[float], duration: float) -> dic
     
     return {
         'throughput': throughput,
-        'p50': p50,
         'p95': p95,
         'p99': p99,
         'p99_9': p99_9,

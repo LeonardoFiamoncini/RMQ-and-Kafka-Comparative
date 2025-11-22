@@ -25,7 +25,7 @@ PORTES DE APLICAÇÃO (RPS):
   grande:   10.000 requisições (serviços globais)
 
 MÉTRICAS COLETADAS:
-  • Latência: P50, P95, P99 (em segundos)
+  • Latência: P95, P99 (em segundos)
   • Throughput: Mensagens por segundo
         """
     )
@@ -91,7 +91,7 @@ MÉTRICAS COLETADAS:
     logger.info(f"   • Porte: {args.porte.upper()} ({message_count:,} mensagens)")
     logger.info(f"   • Tamanho da mensagem: {args.size} bytes")
     logger.info(f"\nMétricas a serem coletadas:")
-    logger.info(f"   • Latência: P50, P95, P99")
+    logger.info(f"   • Latência: P95, P99")
     logger.info(f"   • Throughput: Mensagens/segundo")
     logger.info(f"{'='*60}\n")
 
@@ -115,7 +115,6 @@ MÉTRICAS COLETADAS:
         logger.info(f"RESULTADOS - {args.system.upper()} - PORTE {args.porte.upper()}")
         logger.info(f"{'='*60}")
         logger.info(f"   • Throughput: {results.get('throughput', 0):.2f} msg/s")
-        logger.info(f"   • Latência P50: {results.get('latency_50', 0):.6f} segundos")
         logger.info(f"   • Latência P95: {results.get('latency_95', 0):.6f} segundos")
         logger.info(f"   • Latência P99: {results.get('latency_99', 0):.6f} segundos")
         logger.info(f"   • Mensagens processadas: {results.get('messages_processed', 0):,}")

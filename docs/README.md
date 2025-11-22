@@ -11,7 +11,7 @@ Este projeto compara o desempenho de:
 
 ## Objetivos
 
-1. Avaliar latência (P50/P95/P99) e throughput
+1. Avaliar latência (P95/P99) e throughput
 2. Comparar desempenho em 3 portes de aplicação:
    - **Pequeno**: 100 mensagens (aplicações corporativas internas)
    - **Médio**: 1.000 mensagens (plataformas estabelecidas)
@@ -116,7 +116,6 @@ Os resultados são salvos em:
 Para cada cenário, são coletadas:
 
 - **Throughput**: Mensagens processadas por segundo
-- **Latência P50**: 50% das mensagens com latência menor que este valor
 - **Latência P95**: 95% das mensagens com latência menor que este valor
 - **Latência P99**: 99% das mensagens com latência menor que este valor
 

@@ -49,7 +49,6 @@ def load_benchmark_data():
                 if porte in data[tech]:
                     data[tech][porte].append({
                         'throughput': float(row.get('throughput', 0)),
-                        'latency_50': float(row.get('latency_50', 0)),
                         'latency_95': float(row.get('latency_95', 0)),
                         'latency_99': float(row.get('latency_99', 0)),
                         'messages': int(row.get('messages_processed', 0))
@@ -64,7 +63,6 @@ def load_benchmark_data():
                 metrics = data[tech][porte]
                 aggregated[tech][porte] = {
                     'throughput': np.mean([m['throughput'] for m in metrics]),
-                    'latency_50': np.mean([m['latency_50'] for m in metrics]),
                     'latency_95': np.mean([m['latency_95'] for m in metrics]),
                     'latency_99': np.mean([m['latency_99'] for m in metrics]),
                     'messages': np.mean([m['messages'] for m in metrics])
@@ -72,7 +70,6 @@ def load_benchmark_data():
             else:
                 aggregated[tech][porte] = {
                     'throughput': 0,
-                    'latency_50': 0,
                     'latency_95': 0,
                     'latency_99': 0,
                     'messages': 0
@@ -123,7 +120,7 @@ def plot_latency_comparison(data):
     """Gráfico de comparação de latências por porte"""
     fig, axes = plt.subplots(1, 3, figsize=(16, 6))
     
-    percentiles = ['P50', 'P95', 'P99']
+    percentiles = ['P95', 'P99']
     portes = ['pequeno', 'medio', 'grande']
     
     for idx, porte in enumerate(portes):
@@ -131,17 +128,14 @@ def plot_latency_comparison(data):
         
         # Dados de latência em milissegundos
         baseline_latencies = [
-            data['baseline'][porte]['latency_50'] * 1000,
             data['baseline'][porte]['latency_95'] * 1000,
             data['baseline'][porte]['latency_99'] * 1000
         ]
         rabbitmq_latencies = [
-            data['rabbitmq'][porte]['latency_50'] * 1000,
             data['rabbitmq'][porte]['latency_95'] * 1000,
             data['rabbitmq'][porte]['latency_99'] * 1000
         ]
         kafka_latencies = [
-            data['kafka'][porte]['latency_50'] * 1000,
             data['kafka'][porte]['latency_95'] * 1000,
             data['kafka'][porte]['latency_99'] * 1000
         ]
@@ -241,17 +235,16 @@ def generate_summary_table(data):
             f.write("-" * 40 + "\n")
             
             # Cabeçalho
-            f.write(f"{'Tecnologia':<12} {'Throughput':<15} {'P50 (ms)':<12} {'P95 (ms)':<12} {'P99 (ms)':<12}\n")
+            f.write(f"{'Tecnologia':<12} {'Throughput':<15} {'P95 (ms)':<12} {'P99 (ms)':<12}\n")
             f.write("-" * 40 + "\n")
             
             # Dados
             for tech in ['baseline', 'rabbitmq', 'kafka']:
                 throughput = data[tech][porte]['throughput']
-                p50 = data[tech][porte]['latency_50'] * 1000
                 p95 = data[tech][porte]['latency_95'] * 1000
                 p99 = data[tech][porte]['latency_99'] * 1000
                 
-                f.write(f"{tech.capitalize():<12} {throughput:<15.2f} {p50:<12.2f} {p95:<12.2f} {p99:<12.2f}\n")
+                f.write(f"{tech.capitalize():<12} {throughput:<15.2f} {p95:<12.2f} {p99:<12.2f}\n")
             
             f.write("\n")
         
@@ -268,11 +261,11 @@ def generate_summary_table(data):
         
         f.write("\n")
         
-        # Menor latência P50 por porte
+        # Menor latência P95 por porte
         for porte in ['pequeno', 'medio', 'grande']:
             best_tech = min(['baseline', 'rabbitmq', 'kafka'], 
-                          key=lambda t: data[t][porte]['latency_50'] if data[t][porte]['latency_50'] > 0 else float('inf'))
-            f.write(f"Menor latência P50 em porte {porte}: {best_tech.upper()}\n")
+                          key=lambda t: data[t][porte]['latency_95'] if data[t][porte]['latency_95'] > 0 else float('inf'))
+            f.write(f"Menor latência P95 em porte {porte}: {best_tech.upper()}\n")
     
     print(f"Tabela resumo salva: {filename}")
 
