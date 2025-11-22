@@ -12,10 +12,8 @@ services:
   rabbitmq:
     image: rabbitmq:4.1.1-management
     container_name: rabbitmq
-    hostname: rabbitmq
     ports:
-      - "5672:5672"     # Porta do broker
-      - "15672:15672"   # Interface de administração
+      - "5672:5672"
     environment:
       RABBITMQ_DEFAULT_USER: user
       RABBITMQ_DEFAULT_PASS: password
@@ -36,7 +34,7 @@ services:
     ports:
       - "9092:9092"
     environment:
-      # Cluster ID fixo para reprodutibilidade
+      # Cluster ID fixo
       CLUSTER_ID: "MkU3OEVBNTcwNTJENDM2Qk"
     volumes:
       - kafka_data:/var/lib/kafka/data
@@ -44,7 +42,6 @@ services:
     command: >
       sh -c "
       mkdir -p /var/lib/kafka/data &&
-      chmod 777 /var/lib/kafka/data &&
       if [ ! -f /var/lib/kafka/data/meta.properties ]; then
         /opt/kafka/bin/kafka-storage.sh format -t $${CLUSTER_ID} -c /opt/kafka/config/kraft-server.properties
       fi &&
@@ -54,7 +51,7 @@ services:
       test: ["CMD-SHELL", "/opt/kafka/bin/kafka-broker-api-versions.sh --bootstrap-server localhost:9092 || exit 1"]
       interval: 10s
       timeout: 5s
-      retries: 10
+      retries: 5
       start_period: 60s
 
 volumes:
