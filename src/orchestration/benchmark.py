@@ -1,6 +1,6 @@
 """
 Módulo simplificado de benchmark para TCC
-Objetivo: Comparar Baseline, RabbitMQ e Kafka em 3 portes
+Objetivo: Comparar Baseline, RabbitMQ e Kafka em 5 portes
 """
 
 import csv
@@ -31,7 +31,7 @@ class BenchmarkOrchestrator:
         tech: str,
         count: int,
         size: int = 200,
-        porte: str = "pequeno"
+        size_name: str = "size1"
     ) -> Dict[str, Any]:
         """
         Executa benchmark para uma tecnologia específica
@@ -40,19 +40,19 @@ class BenchmarkOrchestrator:
             tech: Tecnologia (baseline, kafka, rabbitmq)
             count: Número de mensagens para enviar em rajada
             size: Tamanho de cada mensagem em bytes
-            porte: Porte do teste (pequeno, medio, grande)
+            size_name: Size da carga (size1, size2, size3, size4, size5)
         
         Returns:
             Dicionário com métricas coletadas
         """
-        self.logger.info(f"Iniciando benchmark {tech.upper()} - Porte {porte.upper()}")
+        self.logger.info(f"Iniciando benchmark {tech.upper()} - Size {size_name.upper()}")
         self.logger.info(f"   • Mensagens: {count:,}")
         self.logger.info(f"   • Tamanho: {size} bytes")
         self.logger.info(f"   • Modo: Rajada única (burst)")
 
         # Gerar ID único para esta execução
         start_time = time.time()
-        run_id = f"{tech}-{porte}-{int(start_time)}-{uuid.uuid4().hex[:6]}"
+        run_id = f"{tech}-{size_name}-{int(start_time)}-{uuid.uuid4().hex[:6]}"
         self.logger.info(f"   • Run ID: {run_id}")
         
         # Criar diretório para logs
@@ -131,7 +131,7 @@ class BenchmarkOrchestrator:
         # Adicionar informações de execução
         metrics.update({
             "tech": tech,
-            "porte": porte,
+            "size": size_name,
             "run_id": run_id,
             "messages_requested": count,
             "message_size": size,
@@ -141,7 +141,7 @@ class BenchmarkOrchestrator:
         })
         
         # Salvar resultados consolidados
-        self._save_benchmark_results(tech, porte, metrics)
+        self._save_benchmark_results(tech, size_name, metrics)
         
         # Log dos resultados principais
         self.logger.info(f"Benchmark concluído:")
@@ -214,7 +214,7 @@ class BenchmarkOrchestrator:
             "latency_99": latency_99
         }
     
-    def _save_benchmark_results(self, tech: str, porte: str, results: Dict[str, Any]):
+    def _save_benchmark_results(self, tech: str, size_name: str, results: Dict[str, Any]):
         """
         Salva resultados consolidados do benchmark
         """
@@ -225,7 +225,7 @@ class BenchmarkOrchestrator:
         # Preparar linha de dados
         row_data = {
             "timestamp": datetime.now().isoformat(),
-            "porte": porte,
+            "size": size_name,
             "run_id": results.get("run_id", ""),
             "messages_requested": results.get("messages_requested", 0),
             "messages_processed": results.get("messages_processed", 0),

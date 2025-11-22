@@ -92,7 +92,7 @@ class RabbitMQConsumer(BaseBroker):
                     
                     self.received_count += 1
                     
-                    # Log a cada 1000 mensagens ou a cada 10 no porte pequeno
+                    # Log a cada 1000 mensagens ou a cada 10 para cargas pequenas (<=100 mensagens)
                     log_interval = 10 if self.expected_count <= 100 else 1000
                     if self.received_count % log_interval == 0:
                         self.logger.info(f"Recebidas {self.received_count}/{self.expected_count} mensagens")

@@ -31,9 +31,9 @@ COLORS = {
 def load_benchmark_data():
     """Carrega dados de benchmark de todos os sistemas"""
     data = {
-        'baseline': {'pequeno': [], 'medio': [], 'grande': []},
-        'rabbitmq': {'pequeno': [], 'medio': [], 'grande': []},
-        'kafka': {'pequeno': [], 'medio': [], 'grande': []}
+        'baseline': {'size1': [], 'size2': [], 'size3': [], 'size4': [], 'size5': []},
+        'rabbitmq': {'size1': [], 'size2': [], 'size3': [], 'size4': [], 'size5': []},
+        'kafka': {'size1': [], 'size2': [], 'size3': [], 'size4': [], 'size5': []}
     }
     
     for tech in ['baseline', 'rabbitmq', 'kafka']:
@@ -45,9 +45,9 @@ def load_benchmark_data():
         with open(csv_file, 'r') as f:
             reader = csv.DictReader(f)
             for row in reader:
-                porte = row.get('porte', '')
-                if porte in data[tech]:
-                    data[tech][porte].append({
+                size = row.get('size', '')
+                if size in data[tech]:
+                    data[tech][size].append({
                         'throughput': float(row.get('throughput', 0)),
                         'latency_95': float(row.get('latency_95', 0)),
                         'latency_99': float(row.get('latency_99', 0)),
@@ -58,17 +58,17 @@ def load_benchmark_data():
     aggregated = {}
     for tech in data:
         aggregated[tech] = {}
-        for porte in data[tech]:
-            if data[tech][porte]:
-                metrics = data[tech][porte]
-                aggregated[tech][porte] = {
+        for size in data[tech]:
+            if data[tech][size]:
+                metrics = data[tech][size]
+                aggregated[tech][size] = {
                     'throughput': np.mean([m['throughput'] for m in metrics]),
                     'latency_95': np.mean([m['latency_95'] for m in metrics]),
                     'latency_99': np.mean([m['latency_99'] for m in metrics]),
                     'messages': np.mean([m['messages'] for m in metrics])
                 }
             else:
-                aggregated[tech][porte] = {
+                aggregated[tech][size] = {
                     'throughput': 0,
                     'latency_95': 0,
                     'latency_99': 0,
@@ -78,17 +78,17 @@ def load_benchmark_data():
     return aggregated
 
 def plot_throughput_comparison(data):
-    """Gráfico de comparação de throughput por porte"""
-    fig, ax = plt.subplots(figsize=(12, 8))
+    """Gráfico de comparação de throughput por size"""
+    fig, ax = plt.subplots(figsize=(14, 8))
     
-    portes = ['pequeno', 'medio', 'grande']
-    x = np.arange(len(portes))
+    sizes = ['size1', 'size2', 'size3', 'size4', 'size5']
+    x = np.arange(len(sizes))
     width = 0.25
     
     # Barras para cada tecnologia
-    baseline_values = [data['baseline'][p]['throughput'] for p in portes]
-    rabbitmq_values = [data['rabbitmq'][p]['throughput'] for p in portes]
-    kafka_values = [data['kafka'][p]['throughput'] for p in portes]
+    baseline_values = [data['baseline'][s]['throughput'] for s in sizes]
+    rabbitmq_values = [data['rabbitmq'][s]['throughput'] for s in sizes]
+    kafka_values = [data['kafka'][s]['throughput'] for s in sizes]
     
     bars1 = ax.bar(x - width, baseline_values, width, label='Baseline HTTP', color=COLORS['baseline'])
     bars2 = ax.bar(x, rabbitmq_values, width, label='RabbitMQ', color=COLORS['rabbitmq'])
@@ -100,13 +100,13 @@ def plot_throughput_comparison(data):
             height = bar.get_height()
             if height > 0:
                 ax.text(bar.get_x() + bar.get_width()/2., height,
-                       f'{height:.1f}', ha='center', va='bottom', fontsize=10)
+                       f'{height:.1f}', ha='center', va='bottom', fontsize=9)
     
-    ax.set_xlabel('Porte da Aplicação', fontsize=12, fontweight='bold')
+    ax.set_xlabel('Size da Carga', fontsize=12, fontweight='bold')
     ax.set_ylabel('Throughput (msg/s)', fontsize=12, fontweight='bold')
-    ax.set_title('Comparação de Throughput por Porte\n(Maior é melhor)', fontsize=14, fontweight='bold')
+    ax.set_title('Comparação de Throughput por Size\n(Maior é melhor)', fontsize=14, fontweight='bold')
     ax.set_xticks(x)
-    ax.set_xticklabels(['Pequeno\n(100 msgs)', 'Médio\n(1.000 msgs)', 'Grande\n(10.000 msgs)'])
+    ax.set_xticklabels(['Size 1\n(100)', 'Size 2\n(1K)', 'Size 3\n(10K)', 'Size 4\n(100K)', 'Size 5\n(1M)'])
     ax.legend(loc='upper left', fontsize=11)
     ax.grid(True, alpha=0.3)
     
@@ -117,27 +117,27 @@ def plot_throughput_comparison(data):
     plt.close()
 
 def plot_latency_comparison(data):
-    """Gráfico de comparação de latências por porte"""
-    fig, axes = plt.subplots(1, 3, figsize=(16, 6))
+    """Gráfico de comparação de latências por size"""
+    fig, axes = plt.subplots(1, 5, figsize=(20, 6))
     
     percentiles = ['P95', 'P99']
-    portes = ['pequeno', 'medio', 'grande']
+    sizes = ['size1', 'size2', 'size3', 'size4', 'size5']
     
-    for idx, porte in enumerate(portes):
+    for idx, size in enumerate(sizes):
         ax = axes[idx]
         
         # Dados de latência em milissegundos
         baseline_latencies = [
-            data['baseline'][porte]['latency_95'] * 1000,
-            data['baseline'][porte]['latency_99'] * 1000
+            data['baseline'][size]['latency_95'] * 1000,
+            data['baseline'][size]['latency_99'] * 1000
         ]
         rabbitmq_latencies = [
-            data['rabbitmq'][porte]['latency_95'] * 1000,
-            data['rabbitmq'][porte]['latency_99'] * 1000
+            data['rabbitmq'][size]['latency_95'] * 1000,
+            data['rabbitmq'][size]['latency_99'] * 1000
         ]
         kafka_latencies = [
-            data['kafka'][porte]['latency_95'] * 1000,
-            data['kafka'][porte]['latency_99'] * 1000
+            data['kafka'][size]['latency_95'] * 1000,
+            data['kafka'][size]['latency_99'] * 1000
         ]
         
         x = np.arange(len(percentiles))
@@ -153,19 +153,19 @@ def plot_latency_comparison(data):
                 height = bar.get_height()
                 if height > 0:
                     ax.text(bar.get_x() + bar.get_width()/2., height,
-                           f'{height:.1f}', ha='center', va='bottom', fontsize=9)
+                           f'{height:.1f}', ha='center', va='bottom', fontsize=8)
         
-        ax.set_xlabel('Percentil', fontsize=11)
-        ax.set_ylabel('Latência (ms)' if idx == 0 else '', fontsize=11)
-        msgs_map = {"pequeno": "100", "medio": "1.000", "grande": "10.000"}
-        ax.set_title(f'Porte {porte.capitalize()}\n({msgs_map[porte]} msgs)', 
-                    fontsize=12, fontweight='bold')
+        ax.set_xlabel('Percentil', fontsize=10)
+        ax.set_ylabel('Latência (ms)' if idx == 0 else '', fontsize=10)
+        msgs_map = {"size1": "100", "size2": "1K", "size3": "10K", "size4": "100K", "size5": "1M"}
+        ax.set_title(f'Size {size[-1]}\n({msgs_map[size]})', 
+                    fontsize=11, fontweight='bold')
         ax.set_xticks(x)
         ax.set_xticklabels(percentiles)
-        ax.legend(fontsize=10)
+        ax.legend(fontsize=9)
         ax.grid(True, alpha=0.3)
     
-    fig.suptitle('Comparação de Latências por Porte\n(Menor é melhor)', fontsize=14, fontweight='bold', y=1.02)
+    fig.suptitle('Comparação de Latências por Size\n(Menor é melhor)', fontsize=14, fontweight='bold', y=1.02)
     plt.tight_layout()
     filename = PLOTS_DIR / f"latency_comparison_{datetime.now().strftime('%Y%m%d_%H%M%S')}.png"
     plt.savefig(filename, dpi=150, bbox_inches='tight')
@@ -174,41 +174,41 @@ def plot_latency_comparison(data):
 
 def plot_summary_matrix(data):
     """Matriz resumo com todos os resultados"""
-    fig, axes = plt.subplots(2, 3, figsize=(15, 10))
+    fig, axes = plt.subplots(2, 5, figsize=(20, 8))
     
-    portes = ['pequeno', 'medio', 'grande']
+    sizes = ['size1', 'size2', 'size3', 'size4', 'size5']
     techs = ['baseline', 'rabbitmq', 'kafka']
     
-    # Linha 1: Throughput por porte
-    for idx, porte in enumerate(portes):
+    # Linha 1: Throughput por size
+    for idx, size in enumerate(sizes):
         ax = axes[0, idx]
-        values = [data[tech][porte]['throughput'] for tech in techs]
+        values = [data[tech][size]['throughput'] for tech in techs]
         bars = ax.bar(techs, values, color=[COLORS[t] for t in techs])
         
         for bar, value in zip(bars, values):
             if value > 0:
                 ax.text(bar.get_x() + bar.get_width()/2., value,
-                       f'{value:.1f}', ha='center', va='bottom')
+                       f'{value:.1f}', ha='center', va='bottom', fontsize=8)
         
-        ax.set_title(f'Throughput - Porte {porte.capitalize()}', fontweight='bold')
-        ax.set_ylabel('msg/s')
-        ax.set_xticklabels(['Baseline', 'RabbitMQ', 'Kafka'])
+        ax.set_title(f'Throughput - Size {size[-1]}', fontweight='bold', fontsize=10)
+        ax.set_ylabel('msg/s', fontsize=9)
+        ax.set_xticklabels(['Baseline', 'RabbitMQ', 'Kafka'], fontsize=8)
         ax.grid(True, alpha=0.3)
     
-    # Linha 2: Latência P99 por porte
-    for idx, porte in enumerate(portes):
+    # Linha 2: Latência P99 por size
+    for idx, size in enumerate(sizes):
         ax = axes[1, idx]
-        values = [data[tech][porte]['latency_99'] * 1000 for tech in techs]  # Converter para ms
+        values = [data[tech][size]['latency_99'] * 1000 for tech in techs]  # Converter para ms
         bars = ax.bar(techs, values, color=[COLORS[t] for t in techs])
         
         for bar, value in zip(bars, values):
             if value > 0:
                 ax.text(bar.get_x() + bar.get_width()/2., value,
-                       f'{value:.1f}', ha='center', va='bottom')
+                       f'{value:.1f}', ha='center', va='bottom', fontsize=8)
         
-        ax.set_title(f'Latência P99 - Porte {porte.capitalize()}', fontweight='bold')
-        ax.set_ylabel('ms')
-        ax.set_xticklabels(['Baseline', 'RabbitMQ', 'Kafka'])
+        ax.set_title(f'Latência P99 - Size {size[-1]}', fontweight='bold', fontsize=10)
+        ax.set_ylabel('ms', fontsize=9)
+        ax.set_xticklabels(['Baseline', 'RabbitMQ', 'Kafka'], fontsize=8)
         ax.grid(True, alpha=0.3)
     
     fig.suptitle('Matriz de Resultados - TCC Benchmark\nComparação entre Baseline, RabbitMQ e Kafka', 
@@ -229,9 +229,9 @@ def generate_summary_table(data):
         f.write("RESUMO DOS RESULTADOS - TCC BENCHMARK\n")
         f.write("=" * 80 + "\n\n")
         
-        for porte in ['pequeno', 'medio', 'grande']:
-            msgs = {'pequeno': '100', 'medio': '1.000', 'grande': '10.000'}[porte]
-            f.write(f"PORTE {porte.upper()} ({msgs} mensagens)\n")
+        for size in ['size1', 'size2', 'size3', 'size4', 'size5']:
+            msgs = {'size1': '100', 'size2': '1.000', 'size3': '10.000', 'size4': '100.000', 'size5': '1.000.000'}[size]
+            f.write(f"SIZE {size.upper()} ({msgs} mensagens)\n")
             f.write("-" * 40 + "\n")
             
             # Cabeçalho
@@ -240,9 +240,9 @@ def generate_summary_table(data):
             
             # Dados
             for tech in ['baseline', 'rabbitmq', 'kafka']:
-                throughput = data[tech][porte]['throughput']
-                p95 = data[tech][porte]['latency_95'] * 1000
-                p99 = data[tech][porte]['latency_99'] * 1000
+                throughput = data[tech][size]['throughput']
+                p95 = data[tech][size]['latency_95'] * 1000
+                p99 = data[tech][size]['latency_99'] * 1000
                 
                 f.write(f"{tech.capitalize():<12} {throughput:<15.2f} {p95:<12.2f} {p99:<12.2f}\n")
             
@@ -253,19 +253,19 @@ def generate_summary_table(data):
         f.write("ANÁLISE DOS RESULTADOS\n")
         f.write("=" * 80 + "\n\n")
         
-        # Melhor throughput por porte
-        for porte in ['pequeno', 'medio', 'grande']:
+        # Melhor throughput por size
+        for size in ['size1', 'size2', 'size3', 'size4', 'size5']:
             best_tech = max(['baseline', 'rabbitmq', 'kafka'], 
-                          key=lambda t: data[t][porte]['throughput'])
-            f.write(f"Melhor throughput em porte {porte}: {best_tech.upper()}\n")
+                          key=lambda t: data[t][size]['throughput'])
+            f.write(f"Melhor throughput em size {size}: {best_tech.upper()}\n")
         
         f.write("\n")
         
-        # Menor latência P95 por porte
-        for porte in ['pequeno', 'medio', 'grande']:
+        # Menor latência P95 por size
+        for size in ['size1', 'size2', 'size3', 'size4', 'size5']:
             best_tech = min(['baseline', 'rabbitmq', 'kafka'], 
-                          key=lambda t: data[t][porte]['latency_95'] if data[t][porte]['latency_95'] > 0 else float('inf'))
-            f.write(f"Menor latência P95 em porte {porte}: {best_tech.upper()}\n")
+                          key=lambda t: data[t][size]['latency_95'] if data[t][size]['latency_95'] > 0 else float('inf'))
+            f.write(f"Menor latência P95 em size {size}: {best_tech.upper()}\n")
     
     print(f"Tabela resumo salva: {filename}")
 
@@ -281,8 +281,8 @@ def main():
     # Verificar se há dados
     has_data = False
     for tech in data:
-        for porte in data[tech]:
-            if data[tech][porte]['throughput'] > 0:
+        for size in data[tech]:
+            if data[tech][size]['throughput'] > 0:
                 has_data = True
                 break
     

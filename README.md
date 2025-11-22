@@ -12,10 +12,12 @@ Este projeto compara o desempenho de:
 ## Objetivos
 
 1. Avaliar latência (P95/P99) e throughput
-2. Comparar desempenho em 3 portes de aplicação:
-   - **Pequeno**: 100 mensagens (aplicações corporativas internas)
-   - **Médio**: 1.000 mensagens (plataformas estabelecidas)
-   - **Grande**: 10.000 mensagens (serviços globais)
+2. Comparar desempenho em 5 sizes de carga:
+   - **Size 1**: 100 mensagens
+   - **Size 2**: 1.000 mensagens
+   - **Size 3**: 10.000 mensagens
+   - **Size 4**: 100.000 mensagens
+   - **Size 5**: 1.000.000 mensagens
 3. Fornecer dados objetivos para escolha de tecnologia
 
 ## Pré-requisitos
@@ -62,14 +64,14 @@ docker ps
 ### Opção 1: Executar todos os cenários (Recomendado)
 
 ```bash
-# Executa todos os 9 cenários e gera gráficos automaticamente
+# Executa todos os 15 cenários e gera gráficos automaticamente
 ./execute_all.sh
 ```
 
 Este script:
 1. Limpa logs antigos
 2. Reinicia containers
-3. Executa os 9 cenários (3 tecnologias × 3 portes)
+3. Executa os 15 cenários (3 tecnologias × 5 sizes)
 4. Gera gráficos comparativos
 5. Exibe resumo dos resultados
 
@@ -83,12 +85,12 @@ source venv/bin/activate
 python3 main.py --server --port 5000 &
 
 # Executar benchmark individual
-python3 main.py --system <baseline|rabbitmq|kafka> --porte <pequeno|medio|grande>
+python3 main.py --system <baseline|rabbitmq|kafka> --size <size1|size2|size3|size4|size5>
 
 # Exemplos:
-python3 main.py --system baseline --porte pequeno
-python3 main.py --system rabbitmq --porte medio
-python3 main.py --system kafka --porte grande
+python3 main.py --system baseline --size size1
+python3 main.py --system rabbitmq --size size2
+python3 main.py --system kafka --size size3
 ```
 
 ### Gerar gráficos
@@ -140,7 +142,7 @@ Para cada cenário, são coletadas:
 
 ## Serviços Docker
 
-- **RabbitMQ**: Porta 5672 (AMQP) e 15672 (Management)
+- **RabbitMQ**: Porta 5672 (AMQP)
 - **Kafka**: Porta 9092 (Broker)
 - **Baseline**: Porta 5000 (HTTP)
 
@@ -158,8 +160,8 @@ BROKER_CONFIGS = {
         "host": "localhost",
         "port": 5672,
         "queue": "bcc-tcc",
-        "username": "admin",
-        "password": "admin123",
+        "username": "user",
+        "password": "password",
     },
     "kafka": {
         "bootstrap_servers": "localhost:9092",

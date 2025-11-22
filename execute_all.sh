@@ -1,7 +1,7 @@
 #!/bin/bash
 #
-# Script para executar todos os 9 cenários do benchmark TCC
-# Baseline, RabbitMQ e Kafka nos 3 portes: pequeno, médio e grande
+# Script para executar todos os 15 cenários do benchmark TCC
+# Baseline, RabbitMQ e Kafka nos 5 sizes: size1, size2, size3, size4, size5
 #
 
 set -e
@@ -41,9 +41,9 @@ chmod +x scripts/clear_kafka_topic.sh
 # Ativar ambiente virtual
 source venv/bin/activate
 
-# Array de sistemas e portes
+# Array de sistemas e sizes
 systems=("baseline" "rabbitmq" "kafka")
-portes=("pequeno" "medio" "grande")
+sizes=("size1" "size2" "size3" "size4" "size5")
 
 # Iniciar servidor baseline em background
 echo -e "${GREEN}Iniciando servidor Baseline...${NC}"
@@ -58,9 +58,9 @@ for system in "${systems[@]}"; do
     echo -e "${BLUE}Sistema: ${system^^}${NC}"
     echo -e "${BLUE}================================================${NC}"
     
-    for porte in "${portes[@]}"; do
-        echo -e "\n${GREEN}▶ Executando ${system} - Porte ${porte}${NC}"
-        python3 main.py --system $system --porte $porte || true
+    for size in "${sizes[@]}"; do
+        echo -e "\n${GREEN}▶ Executando ${system} - Size ${size}${NC}"
+        python3 main.py --system $system --size $size || true
         
         # Pequena pausa entre execuções
         sleep 2

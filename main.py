@@ -1,6 +1,6 @@
 """
 Ponto de entrada principal do sistema de benchmark TCC
-Objetivo: Comparar Baseline HTTP, RabbitMQ e Kafka em 3 portes
+Objetivo: Comparar Baseline HTTP, RabbitMQ e Kafka em 5 sizes
 """
 import argparse
 import sys
@@ -19,10 +19,12 @@ def main():
         description='TCC - Análise Comparativa: Apache Kafka vs RabbitMQ',
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog="""
-PORTES DE APLICAÇÃO (RPS):
-  pequeno:  100 requisições (aplicações corporativas internas, MVPs)
-  medio:    1.000 requisições (e-commerce estabelecido)
-  grande:   10.000 requisições (serviços globais)
+SIZES DE CARGA:
+  size1:  100 mensagens
+  size2:  1.000 mensagens
+  size3:  10.000 mensagens
+  size4:  100.000 mensagens
+  size5:  1.000.000 mensagens
 
 MÉTRICAS COLETADAS:
   • Latência: P95, P99 (em segundos)
@@ -32,10 +34,10 @@ MÉTRICAS COLETADAS:
     
     # Argumentos simplificados para o TCC
     parser.add_argument(
-        "--porte", 
-        choices=["pequeno", "medio", "grande"],
+        "--size", 
+        choices=["size1", "size2", "size3", "size4", "size5"],
         required=False,
-        help="Porte da aplicação (pequeno=100, medio=1000, grande=10000 mensagens)"
+        help="Size da carga (size1=100, size2=1000, size3=10000, size4=100000, size5=1000000 mensagens)"
     )
     parser.add_argument(
         "--system", 
@@ -44,7 +46,7 @@ MÉTRICAS COLETADAS:
         help="Sistema a ser testado: rabbitmq, kafka ou baseline"
     )
     parser.add_argument(
-        "--size", 
+        "--message-size", 
         type=int, 
         default=200, 
         help="Tamanho de cada mensagem em bytes (padrão: 200)"
@@ -72,24 +74,26 @@ MÉTRICAS COLETADAS:
         return
     
     # Validar argumentos obrigatórios para benchmark
-    if not args.porte or not args.system:
-        parser.error("Os parâmetros --porte e --system são obrigatórios para executar o benchmark.")
+    if not args.size or not args.system:
+        parser.error("Os parâmetros --size e --system são obrigatórios para executar o benchmark.")
     
-    # Mapear porte para número de mensagens
-    PORTE_MESSAGES = {
-        "pequeno": 100,     # Aplicações corporativas internas
-        "medio": 1000,      # Plataformas estabelecidas
-        "grande": 10000     # Serviços globais
+    # Mapear size para número de mensagens
+    SIZE_MESSAGES = {
+        "size1": 100,
+        "size2": 1000,
+        "size3": 10000,
+        "size4": 100000,
+        "size5": 1000000
     }
     
-    message_count = PORTE_MESSAGES[args.porte]
+    message_count = SIZE_MESSAGES[args.size]
     
     # Log da configuração do benchmark
     logger.info(f"\nBENCHMARK TCC - ANÁLISE COMPARATIVA")
     logger.info(f"{'='*60}")
     logger.info(f"   • Sistema: {args.system.upper()}")
-    logger.info(f"   • Porte: {args.porte.upper()} ({message_count:,} mensagens)")
-    logger.info(f"   • Tamanho da mensagem: {args.size} bytes")
+    logger.info(f"   • Size: {args.size.upper()} ({message_count:,} mensagens)")
+    logger.info(f"   • Tamanho da mensagem: {args.message_size} bytes")
     logger.info(f"\nMétricas a serem coletadas:")
     logger.info(f"   • Latência: P95, P99")
     logger.info(f"   • Throughput: Mensagens/segundo")
@@ -102,8 +106,8 @@ MÉTRICAS COLETADAS:
         results = orchestrator.run_benchmark(
             tech=args.system, 
             count=message_count,
-            size=args.size,
-            porte=args.porte  # Passar o porte para facilitar identificação
+            size=args.message_size,
+            size_name=args.size  # Passar o size para facilitar identificação
         )
     except Exception as exc:
         logger.error(f"Falha na execução do benchmark: {exc}")
@@ -112,7 +116,7 @@ MÉTRICAS COLETADAS:
     # Exibir resultados
     if results:
         logger.info(f"\n{'='*60}")
-        logger.info(f"RESULTADOS - {args.system.upper()} - PORTE {args.porte.upper()}")
+        logger.info(f"RESULTADOS - {args.system.upper()} - SIZE {args.size.upper()}")
         logger.info(f"{'='*60}")
         logger.info(f"   • Throughput: {results.get('throughput', 0):.2f} msg/s")
         logger.info(f"   • Latência P95: {results.get('latency_95', 0):.6f} segundos")
