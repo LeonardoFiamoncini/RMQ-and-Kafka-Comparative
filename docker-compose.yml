@@ -1,10 +1,9 @@
 # ============================================================================
 # Docker Compose - TCC Benchmark Simplificado
 # ============================================================================
-# Configuração minimalista para reprodutibilidade e simplicidade:
+# Configuração para reprodutibilidade e simplicidade:
 # - RabbitMQ 4.1.1 com Quorum Queue (1 nó)
 # - Apache Kafka 4.0.0 com KRaft Mode (sem Zookeeper)
-# - Sem clusters complexos ou ferramentas de monitoramento
 # ============================================================================
 
 services:
