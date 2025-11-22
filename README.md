@@ -12,11 +12,12 @@ Este projeto compara o desempenho de:
 ## Objetivos
 
 1. Avaliar latência (P95/P99) e throughput
-2. Comparar desempenho em 4 sizes de carga:
+2. Comparar desempenho em 5 sizes de carga:
    - **Size 1**: 100 mensagens
    - **Size 2**: 1.000 mensagens
    - **Size 3**: 10.000 mensagens
    - **Size 4**: 100.000 mensagens
+   - **Size 5**: 1.000.000 mensagens
 3. Fornecer dados objetivos para escolha de tecnologia
 
 ## Pré-requisitos
@@ -63,14 +64,14 @@ docker ps
 ### Opção 1: Executar todos os cenários (Recomendado)
 
 ```bash
-# Executa todos os 12 cenários e gera gráficos automaticamente
+# Executa todos os 15 cenários e gera gráficos automaticamente
 ./execute_all.sh
 ```
 
 Este script:
 1. Limpa logs antigos
 2. Reinicia containers
-3. Executa os 12 cenários (3 tecnologias × 4 sizes)
+3. Executa os 15 cenários (3 tecnologias × 5 sizes)
 4. Gera gráficos comparativos
 5. Exibe resumo dos resultados
 
@@ -84,7 +85,7 @@ source venv/bin/activate
 python3 main.py --server --port 5000 &
 
 # Executar benchmark individual
-python3 main.py --system <baseline|rabbitmq|kafka> --size <size1|size2|size3|size4>
+python3 main.py --system <baseline|rabbitmq|kafka> --size <size1|size2|size3|size4|size5>
 
 # Exemplos:
 python3 main.py --system baseline --size size1

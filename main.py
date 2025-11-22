@@ -24,6 +24,7 @@ SIZES DE CARGA:
   size2:  1.000 mensagens
   size3:  10.000 mensagens
   size4:  100.000 mensagens
+  size5:  1.000.000 mensagens
 
 MÉTRICAS COLETADAS:
   • Latência: P95, P99 (em segundos)
@@ -34,9 +35,9 @@ MÉTRICAS COLETADAS:
     # Argumentos simplificados para o TCC
     parser.add_argument(
         "--size", 
-        choices=["size1", "size2", "size3", "size4"],
+        choices=["size1", "size2", "size3", "size4", "size5"],
         required=False,
-        help="Size da carga (size1=100, size2=1000, size3=10000, size4=100000 mensagens)"
+        help="Size da carga (size1=100, size2=1000, size3=10000, size4=100000, size5=1000000 mensagens)"
     )
     parser.add_argument(
         "--system", 
@@ -81,7 +82,8 @@ MÉTRICAS COLETADAS:
         "size1": 100,
         "size2": 1000,
         "size3": 10000,
-        "size4": 100000
+        "size4": 100000,
+        "size5": 1000000
     }
     
     message_count = SIZE_MESSAGES[args.size]
