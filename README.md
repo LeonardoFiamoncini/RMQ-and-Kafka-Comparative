@@ -63,7 +63,7 @@ docker ps
 
 ```bash
 # Executa todos os 9 cenários e gera gráficos automaticamente
-./executar_todos_cenarios_tcc.sh
+./execute_all.sh
 ```
 
 Este script:
@@ -96,7 +96,7 @@ python3 main.py --system kafka --porte grande
 Após executar os testes, gere os gráficos:
 
 ```bash
-python3 gerar_graficos_tcc.py
+python3 generate_plots.py
 ```
 
 ## Resultados
@@ -134,8 +134,8 @@ Para cada cenário, são coletadas:
 ├── config/                # Configurações
 ├── docker-compose.yml     # Definição dos containers
 ├── main.py               # Entry point principal
-├── gerar_graficos_tcc.py # Gerador de gráficos
-└── executar_todos_cenarios_tcc.sh  # Script de execução completa
+├── generate_plots.py # Gerador de gráficos
+└── execute_all.sh  # Script de execução completa
 ```
 
 ## Serviços Docker

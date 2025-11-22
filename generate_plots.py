@@ -288,7 +288,7 @@ def main():
     
     if not has_data:
         print("Nenhum dado de benchmark encontrado!")
-        print("Execute primeiro: ./executar_todos_cenarios_tcc.sh")
+        print("Execute primeiro: ./execute_all.sh")
         return
     
     # Gerar gráficos

@@ -75,7 +75,7 @@ kill $SERVER_PID || true
 echo -e "\n${BLUE}================================================${NC}"
 echo -e "${BLUE}GERANDO GRÁFICOS${NC}"
 echo -e "${BLUE}================================================${NC}"
-python3 gerar_graficos_tcc.py
+python3 generate_plots.py
 
 echo -e "\n${GREEN}EXECUÇÃO COMPLETA!${NC}"
 echo -e "${GREEN}Resultados salvos em:${NC}"
