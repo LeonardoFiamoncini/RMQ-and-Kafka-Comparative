@@ -2,7 +2,7 @@
 
 ## Descrição
 
-Implementação prática para o TCC **"APACHE KAFKA E RABBITMQ: UMA ANÁLISE COMPARATIVA ENTRE SISTEMAS DE MENSAGERIA EM APLICAÇÕES DE DIFERENTES PORTES"**.
+Implementação prática para o Trabalho de Conclusão de Curso (TCC) cujo tema é **"Apache Kafka e RabbitMQ: Uma análise comparativa entre Sistemas de Mensageria em aplicações de diferentes portes"**.
 
 Este projeto compara o desempenho de:
 - **Baseline**: Comunicação HTTP síncrona (Flask)
