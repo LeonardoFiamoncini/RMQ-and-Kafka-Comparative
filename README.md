@@ -124,18 +124,18 @@ Para cada cenário, são coletadas:
 ```
 .
 ├── src/
-│   ├── brokers/           # Implementações de cada tecnologia
+│   ├── brokers/            # Implementações de cada tecnologia
 │   │   ├── baseline/       # Cliente/Servidor HTTP
 │   │   ├── kafka/          # Produtor/Consumidor Kafka
 │   │   └── rabbitmq/       # Produtor/Consumidor RabbitMQ
-│   ├── core/              # Configurações e métricas
-│   └── orchestration/     # Orquestração dos benchmarks
-├── logs/                  # Resultados dos testes
-├── config/                # Configurações
-├── docker-compose.yml     # Definição dos containers
-├── main.py               # Entry point principal
-├── generate_plots.py # Gerador de gráficos
-└── execute_all.sh  # Script de execução completa
+│   ├── core/               # Configurações e métricas
+│   └── orchestration/      # Orquestração dos benchmarks
+├── logs/                   # Resultados dos testes
+├── config/                 # Configurações
+├── docker-compose.yml      # Definição dos containers
+├── main.py                 # Entry point principal
+├── generate_plots.py       # Gerador de gráficos
+└── execute_all.sh          # Script de execução completa
 ```
 
 ## Serviços Docker
