@@ -1,4 +1,7 @@
 #!/bin/bash
+#
+# Script para limpar logs antigos
+#
 
 set -euo pipefail
 

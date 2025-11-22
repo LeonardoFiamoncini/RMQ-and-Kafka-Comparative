@@ -5,10 +5,10 @@
 
 echo "Limpando tópico Kafka..."
 
-# Usar o path completo do Kafka no container
+# Usa o path completo do Kafka no container
 KAFKA_BIN="/opt/kafka/bin"
 
-# Deletar o tópico se existir
+# Deleta o tópico se existir
 docker exec kafka ${KAFKA_BIN}/kafka-topics.sh \
     --bootstrap-server localhost:9092 \
     --delete \
@@ -17,16 +17,13 @@ docker exec kafka ${KAFKA_BIN}/kafka-topics.sh \
 
 sleep 2
 
-# Recriar o tópico com configurações otimizadas
+# Recria o tópico
 docker exec kafka ${KAFKA_BIN}/kafka-topics.sh \
     --bootstrap-server localhost:9092 \
     --create \
     --topic bcc-tcc \
-    --partitions 16 \
+    --partitions 1 \
     --replication-factor 1 \
-    --config min.insync.replicas=1 \
-    --config retention.ms=60000 \
-    --config segment.ms=10000 \
     2>/dev/null || true
 
 echo "Tópico Kafka limpo e recriado"
