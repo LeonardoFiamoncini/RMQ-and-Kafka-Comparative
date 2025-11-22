@@ -1,7 +1,7 @@
 #!/bin/bash
 #
-# Script para executar todos os 15 cenários do benchmark TCC
-# Baseline, RabbitMQ e Kafka nos 5 sizes: size1, size2, size3, size4, size5
+# Script para executar todos os 12 cenários do benchmark TCC
+# Baseline, RabbitMQ e Kafka nos 4 sizes: size1, size2, size3, size4
 #
 
 set -e
@@ -43,7 +43,7 @@ source venv/bin/activate
 
 # Array de sistemas e sizes
 systems=("baseline" "rabbitmq" "kafka")
-sizes=("size1" "size2" "size3" "size4" "size5")
+sizes=("size1" "size2" "size3" "size4")
 
 # Iniciar servidor baseline em background
 echo -e "${GREEN}Iniciando servidor Baseline...${NC}"

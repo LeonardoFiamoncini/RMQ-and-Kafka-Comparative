@@ -31,9 +31,9 @@ COLORS = {
 def load_benchmark_data():
     """Carrega dados de benchmark de todos os sistemas"""
     data = {
-        'baseline': {'size1': [], 'size2': [], 'size3': [], 'size4': [], 'size5': []},
-        'rabbitmq': {'size1': [], 'size2': [], 'size3': [], 'size4': [], 'size5': []},
-        'kafka': {'size1': [], 'size2': [], 'size3': [], 'size4': [], 'size5': []}
+        'baseline': {'size1': [], 'size2': [], 'size3': [], 'size4': []},
+        'rabbitmq': {'size1': [], 'size2': [], 'size3': [], 'size4': []},
+        'kafka': {'size1': [], 'size2': [], 'size3': [], 'size4': []}
     }
     
     for tech in ['baseline', 'rabbitmq', 'kafka']:
@@ -79,9 +79,9 @@ def load_benchmark_data():
 
 def plot_throughput_comparison(data):
     """Gráfico de comparação de throughput por size"""
-    fig, ax = plt.subplots(figsize=(14, 8))
+    fig, ax = plt.subplots(figsize=(12, 8))
     
-    sizes = ['size1', 'size2', 'size3', 'size4', 'size5']
+    sizes = ['size1', 'size2', 'size3', 'size4']
     x = np.arange(len(sizes))
     width = 0.25
     
@@ -106,7 +106,7 @@ def plot_throughput_comparison(data):
     ax.set_ylabel('Throughput (msg/s)', fontsize=12, fontweight='bold')
     ax.set_title('Comparação de Throughput por Size\n(Maior é melhor)', fontsize=14, fontweight='bold')
     ax.set_xticks(x)
-    ax.set_xticklabels(['Size 1\n(100)', 'Size 2\n(1K)', 'Size 3\n(10K)', 'Size 4\n(100K)', 'Size 5\n(1M)'])
+    ax.set_xticklabels(['Size 1\n(100)', 'Size 2\n(1K)', 'Size 3\n(10K)', 'Size 4\n(100K)'])
     ax.legend(loc='upper left', fontsize=11)
     ax.grid(True, alpha=0.3)
     
@@ -118,10 +118,10 @@ def plot_throughput_comparison(data):
 
 def plot_latency_comparison(data):
     """Gráfico de comparação de latências por size"""
-    fig, axes = plt.subplots(1, 5, figsize=(20, 6))
+    fig, axes = plt.subplots(1, 4, figsize=(16, 6))
     
     percentiles = ['P95', 'P99']
-    sizes = ['size1', 'size2', 'size3', 'size4', 'size5']
+    sizes = ['size1', 'size2', 'size3', 'size4']
     
     for idx, size in enumerate(sizes):
         ax = axes[idx]
@@ -153,16 +153,16 @@ def plot_latency_comparison(data):
                 height = bar.get_height()
                 if height > 0:
                     ax.text(bar.get_x() + bar.get_width()/2., height,
-                           f'{height:.1f}', ha='center', va='bottom', fontsize=8)
+                           f'{height:.1f}', ha='center', va='bottom', fontsize=9)
         
-        ax.set_xlabel('Percentil', fontsize=10)
-        ax.set_ylabel('Latência (ms)' if idx == 0 else '', fontsize=10)
-        msgs_map = {"size1": "100", "size2": "1K", "size3": "10K", "size4": "100K", "size5": "1M"}
+        ax.set_xlabel('Percentil', fontsize=11)
+        ax.set_ylabel('Latência (ms)' if idx == 0 else '', fontsize=11)
+        msgs_map = {"size1": "100", "size2": "1K", "size3": "10K", "size4": "100K"}
         ax.set_title(f'Size {size[-1]}\n({msgs_map[size]})', 
-                    fontsize=11, fontweight='bold')
+                    fontsize=12, fontweight='bold')
         ax.set_xticks(x)
         ax.set_xticklabels(percentiles)
-        ax.legend(fontsize=9)
+        ax.legend(fontsize=10)
         ax.grid(True, alpha=0.3)
     
     fig.suptitle('Comparação de Latências por Size\n(Menor é melhor)', fontsize=14, fontweight='bold', y=1.02)
@@ -174,9 +174,9 @@ def plot_latency_comparison(data):
 
 def plot_summary_matrix(data):
     """Matriz resumo com todos os resultados"""
-    fig, axes = plt.subplots(2, 5, figsize=(20, 8))
+    fig, axes = plt.subplots(2, 4, figsize=(16, 8))
     
-    sizes = ['size1', 'size2', 'size3', 'size4', 'size5']
+    sizes = ['size1', 'size2', 'size3', 'size4']
     techs = ['baseline', 'rabbitmq', 'kafka']
     
     # Linha 1: Throughput por size
@@ -229,8 +229,8 @@ def generate_summary_table(data):
         f.write("RESUMO DOS RESULTADOS - TCC BENCHMARK\n")
         f.write("=" * 80 + "\n\n")
         
-        for size in ['size1', 'size2', 'size3', 'size4', 'size5']:
-            msgs = {'size1': '100', 'size2': '1.000', 'size3': '10.000', 'size4': '100.000', 'size5': '1.000.000'}[size]
+        for size in ['size1', 'size2', 'size3', 'size4']:
+            msgs = {'size1': '100', 'size2': '1.000', 'size3': '10.000', 'size4': '100.000'}[size]
             f.write(f"SIZE {size.upper()} ({msgs} mensagens)\n")
             f.write("-" * 40 + "\n")
             
@@ -254,7 +254,7 @@ def generate_summary_table(data):
         f.write("=" * 80 + "\n\n")
         
         # Melhor throughput por size
-        for size in ['size1', 'size2', 'size3', 'size4', 'size5']:
+        for size in ['size1', 'size2', 'size3', 'size4']:
             best_tech = max(['baseline', 'rabbitmq', 'kafka'], 
                           key=lambda t: data[t][size]['throughput'])
             f.write(f"Melhor throughput em size {size}: {best_tech.upper()}\n")
@@ -262,7 +262,7 @@ def generate_summary_table(data):
         f.write("\n")
         
         # Menor latência P95 por size
-        for size in ['size1', 'size2', 'size3', 'size4', 'size5']:
+        for size in ['size1', 'size2', 'size3', 'size4']:
             best_tech = min(['baseline', 'rabbitmq', 'kafka'], 
                           key=lambda t: data[t][size]['latency_95'] if data[t][size]['latency_95'] > 0 else float('inf'))
             f.write(f"Menor latência P95 em size {size}: {best_tech.upper()}\n")
