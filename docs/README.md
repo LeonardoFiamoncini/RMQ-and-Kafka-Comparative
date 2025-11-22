@@ -125,7 +125,7 @@ Para cada cenário, são coletadas:
 ```
 .
 ├── src/
-│   ├── brokers/           # Implementações dos brokers
+│   ├── brokers/           # Implementações de cada tecnologia
 │   │   ├── baseline/       # Cliente/Servidor HTTP
 │   │   ├── kafka/          # Produtor/Consumidor Kafka
 │   │   └── rabbitmq/       # Produtor/Consumidor RabbitMQ
@@ -212,7 +212,7 @@ docker compose down -v
 
 ## Contribuições
 
-Este projeto foi desenvolvido como parte de um Trabalho de Conclusão de Curso (TCC) em Ciência da Computação.
+Este projeto foi desenvolvido como parte de um Trabalho de Conclusão de Curso (TCC) para a obtenção do título de Bacharel em Ciência da Computação.
 
 ## Contato
 
