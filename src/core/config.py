@@ -1,8 +1,7 @@
 """
 Configurações centralizadas do projeto.
 
-Este módulo contém todas as configurações do sistema, incluindo
-configurações de brokers, logging, benchmark e chaos engineering.
+Este módulo contém todas as configurações de brokers, logging etc. para o sistema.
 """
 
 from pathlib import Path
