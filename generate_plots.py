@@ -106,7 +106,7 @@ def plot_throughput_comparison(data):
     ax.set_ylabel('Throughput (msg/s)', fontsize=12, fontweight='bold')
     ax.set_title('Comparação de Throughput por Size\n(Maior é melhor)', fontsize=14, fontweight='bold')
     ax.set_xticks(x)
-    ax.set_xticklabels(['Size 1\n(100)', 'Size 2\n(1K)', 'Size 3\n(10K)', 'Size 4\n(100K)', 'Size 5\n(1M)'])
+    ax.set_xticklabels(['Size 1\n(10²)', 'Size 2\n(10³)', 'Size 3\n(10⁴)', 'Size 4\n(10⁵)', 'Size 5\n(10⁶)'])
     ax.legend(loc='upper left', fontsize=11)
     ax.grid(True, alpha=0.3)
     
@@ -157,7 +157,7 @@ def plot_latency_comparison(data):
         
         ax.set_xlabel('Percentil', fontsize=10)
         ax.set_ylabel('Latência (ms)' if idx == 0 else '', fontsize=10)
-        msgs_map = {"size1": "100", "size2": "1K", "size3": "10K", "size4": "100K", "size5": "1M"}
+        msgs_map = {"size1": "10²", "size2": "10³", "size3": "10⁴", "size4": "10⁵", "size5": "10⁶"}
         ax.set_title(f'Size {size[-1]}\n({msgs_map[size]})', 
                     fontsize=11, fontweight='bold')
         ax.set_xticks(x)

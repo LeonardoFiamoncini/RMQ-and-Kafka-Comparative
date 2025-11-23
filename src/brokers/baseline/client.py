@@ -30,7 +30,7 @@ class BaselineClient(BaseBroker):
         Args:
             count: Número de requisições para enviar
             size: Tamanho de cada mensagem em bytes
-            rps: Rate limiting (não usado - sempre rajada)
+            rps: Rate limiting
         """
         try:
             self.metrics.start_timing()

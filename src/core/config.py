@@ -67,27 +67,3 @@ LOGGING_CONFIG = {
     },
 }
 
-# Configurações de benchmark
-BENCHMARK_CONFIG = {
-    "default_message_count": 1000,
-    "default_message_size": 200,
-    "default_producers": 1,
-    "default_consumers": 1,
-    "default_rps": None,
-    "timeout": 300,  # 5 minutos
-    "monitoring_interval": 1.0,  # 1 segundo
-}
-
-# Configurações de chaos engineering
-CHAOS_CONFIG = {
-    "default_delay": 10,  # segundos
-    "max_recovery_wait": 60,  # segundos
-    "monitoring_interval": 2.0,  # segundos
-}
-
-# Configurações de monitoramento
-MONITORING_CONFIG = {
-    "docker_stats_format": "{{.CPUPerc}},{{.MemUsage}}",
-    "monitoring_interval": 1.0,
-    "timeout": 5,
-}
