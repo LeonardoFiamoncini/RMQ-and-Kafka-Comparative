@@ -1,7 +1,5 @@
 """
-Cálculo correto de percentis segundo as melhores práticas.
-
-Baseado em:
+Cálculo de percentis baseado em:
 - Hyndman, R.J. & Fan, Y. (1996). Sample Quantiles in Statistical Packages.
 - Jain, R. (1991). The Art of Computer Systems Performance Analysis.
 
