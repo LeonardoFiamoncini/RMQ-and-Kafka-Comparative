@@ -1,7 +1,9 @@
 #!/bin/bash
 #
-# Script para executar todos os 15 cenários do benchmark TCC
-# Baseline, RabbitMQ e Kafka nos 5 sizes: size1, size2, size3, size4, size5
+# Script para executar todos os 45 cenários do benchmark TCC
+# Baseline, RabbitMQ e Kafka nos 5 sizes × 3 message-sizes
+# Sizes: size1, size2, size3, size4, size5
+# Message Sizes: 1KB, 10KB, 100KB
 #
 
 set -e
@@ -41,9 +43,10 @@ chmod +x scripts/clear_kafka_topic.sh
 # Ativar ambiente virtual
 source venv/bin/activate
 
-# Array de sistemas e sizes
+# Array de sistemas, sizes e message sizes
 systems=("baseline" "rabbitmq" "kafka")
 sizes=("size1" "size2" "size3" "size4" "size5")
+message_sizes=(1024 10240 102400)  # 1KB, 10KB, 100KB em bytes
 
 # Iniciar servidor baseline em background
 echo -e "${GREEN}Iniciando servidor Baseline...${NC}"
@@ -53,17 +56,24 @@ SERVER_PID=$!
 sleep 3
 
 # Executar benchmarks
+total_scenarios=$((${#systems[@]} * ${#sizes[@]} * ${#message_sizes[@]}))
+current_scenario=0
+
 for system in "${systems[@]}"; do
     echo -e "\n${BLUE}================================================${NC}"
     echo -e "${BLUE}Sistema: ${system^^}${NC}"
     echo -e "${BLUE}================================================${NC}"
     
     for size in "${sizes[@]}"; do
-        echo -e "\n${GREEN}▶ Executando ${system} - Size ${size}${NC}"
-        python3 main.py --system $system --size $size || true
-        
-        # Pequena pausa entre execuções
-        sleep 2
+        for msg_size in "${message_sizes[@]}"; do
+            current_scenario=$((current_scenario + 1))
+            msg_size_kb=$((msg_size / 1024))
+            echo -e "\n${GREEN}▶ [${current_scenario}/${total_scenarios}] Executando ${system} - Size ${size} - Message Size ${msg_size_kb}KB${NC}"
+            python3 main.py --system $system --size $size --message-size $msg_size || true
+            
+            # Pequena pausa entre execuções
+            sleep 2
+        done
     done
 done
 

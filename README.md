@@ -18,7 +18,11 @@ Este projeto compara o desempenho de:
    - **Size 3**: 10.000 mensagens
    - **Size 4**: 100.000 mensagens
    - **Size 5**: 1.000.000 mensagens
-3. Fornecer dados objetivos para escolha de tecnologia
+3. Avaliar impacto do tamanho das mensagens em 3 configurações:
+   - **1 KB**: Padrão de mercado para "Pequeno"
+   - **10 KB**: Representa objetos JSON complexos
+   - **100 KB**: Estressa a rede e o disco; "Grande"
+4. Fornecer dados objetivos para escolha de tecnologia
 
 ## Pré-requisitos
 
@@ -64,15 +68,15 @@ docker ps
 ### Opção 1: Executar todos os cenários (Recomendado)
 
 ```bash
-# Executa todos os 15 cenários e gera gráficos automaticamente
+# Executa todos os 45 cenários e gera gráficos automaticamente
 ./execute_all.sh
 ```
 
 Este script:
 1. Limpa logs antigos
 2. Reinicia containers
-3. Executa os 15 cenários (3 tecnologias × 5 sizes)
-4. Gera gráficos comparativos
+3. Executa os 45 cenários (3 tecnologias × 5 sizes × 3 message-sizes)
+4. Gera gráficos comparativos (separados por message-size)
 5. Exibe resumo dos resultados
 
 ### Opção 2: Executar cenários individuais
@@ -85,12 +89,12 @@ source venv/bin/activate
 python3 main.py --server --port 5000 &
 
 # Executar benchmark individual
-python3 main.py --system <baseline|rabbitmq|kafka> --size <size1|size2|size3|size4|size5>
+python3 main.py --system <baseline|rabbitmq|kafka> --size <size1|size2|size3|size4|size5> [--message-size <bytes>]
 
 # Exemplos:
-python3 main.py --system baseline --size size1
-python3 main.py --system rabbitmq --size size2
-python3 main.py --system kafka --size size3
+python3 main.py --system baseline --size size1 --message-size 1024
+python3 main.py --system rabbitmq --size size2 --message-size 10240
+python3 main.py --system kafka --size size3 --message-size 102400
 ```
 
 ### Gerar gráficos
@@ -106,12 +110,12 @@ python3 generate_plots.py
 Os resultados são salvos em:
 
 - **Logs detalhados**: `logs/<tecnologia>/<run-id>/`
-- **Resultados consolidados**: `logs/<tecnologia>/benchmark_results.csv`
+- **Resultados consolidados**: `logs/<tecnologia>/benchmark_results.csv` (inclui coluna `message_size`)
 - **Gráficos**: `logs/plots/`
-  - `throughput_comparison_*.png` - Comparação de throughput
-  - `latency_comparison_*.png` - Comparação de latências
-  - `summary_matrix_*.png` - Matriz resumo
-  - `summary_table_*.txt` - Tabela com todos os resultados
+  - `throughput_comparison_*KB_*.png` - Comparação de throughput por message-size
+  - `latency_comparison_*KB_*.png` - Comparação de latências por message-size
+  - `summary_matrix_*KB_*.png` - Matriz resumo por message-size
+  - `summary_table_*.txt` - Tabela consolidada com todos os resultados
 
 ## Métricas Coletadas
 
@@ -120,6 +124,7 @@ Para cada cenário, são coletadas:
 - **Throughput**: Mensagens processadas por segundo
 - **Latência P95**: 95% das mensagens com latência menor que este valor
 - **Latência P99**: 99% das mensagens com latência menor que este valor
+- **Message Size**: Tamanho de cada mensagem em bytes (1KB, 10KB, 100KB)
 
 ## Estrutura do Projeto
 

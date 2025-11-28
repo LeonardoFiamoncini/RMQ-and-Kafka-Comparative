@@ -226,6 +226,7 @@ class BenchmarkOrchestrator:
         row_data = {
             "timestamp": datetime.now().isoformat(),
             "size": size_name,
+            "message_size": results.get("message_size", 0),
             "run_id": results.get("run_id", ""),
             "messages_requested": results.get("messages_requested", 0),
             "messages_processed": results.get("messages_processed", 0),

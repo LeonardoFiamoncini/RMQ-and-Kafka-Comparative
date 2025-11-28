@@ -29,12 +29,18 @@ COLORS = {
 }
 
 def load_benchmark_data():
-    """Carrega dados de benchmark de todos os sistemas"""
-    data = {
-        'baseline': {'size1': [], 'size2': [], 'size3': [], 'size4': [], 'size5': []},
-        'rabbitmq': {'size1': [], 'size2': [], 'size3': [], 'size4': [], 'size5': []},
-        'kafka': {'size1': [], 'size2': [], 'size3': [], 'size4': [], 'size5': []}
-    }
+    """Carrega dados de benchmark de todos os sistemas com estrutura 3D (tech, size, message_size)"""
+    # Estrutura 3D: data[tech][size][message_size] = []
+    sizes = ['size1', 'size2', 'size3', 'size4', 'size5']
+    message_sizes = [1024, 10240, 102400]  # 1KB, 10KB, 100KB
+    
+    data = {}
+    for tech in ['baseline', 'rabbitmq', 'kafka']:
+        data[tech] = {}
+        for size in sizes:
+            data[tech][size] = {}
+            for msg_size in message_sizes:
+                data[tech][size][msg_size] = []
     
     for tech in ['baseline', 'rabbitmq', 'kafka']:
         csv_file = LOGS_DIR / tech / "benchmark_results.csv"
@@ -46,8 +52,21 @@ def load_benchmark_data():
             reader = csv.DictReader(f)
             for row in reader:
                 size = row.get('size', '')
-                if size in data[tech]:
-                    data[tech][size].append({
+                # Usar default 200 para compatibilidade com dados antigos
+                message_size = int(row.get('message_size', 200))
+                
+                # Normalizar message_size para valores conhecidos (compatibilidade)
+                if message_size not in message_sizes:
+                    # Se não for um dos valores esperados, usar o mais próximo
+                    if message_size <= 512:
+                        message_size = 1024
+                    elif message_size <= 5120:
+                        message_size = 10240
+                    else:
+                        message_size = 102400
+                
+                if size in sizes and message_size in message_sizes:
+                    data[tech][size][message_size].append({
                         'throughput': float(row.get('throughput', 0)),
                         'latency_95': float(row.get('latency_95', 0)),
                         'latency_99': float(row.get('latency_99', 0)),
@@ -59,26 +78,28 @@ def load_benchmark_data():
     for tech in data:
         aggregated[tech] = {}
         for size in data[tech]:
-            if data[tech][size]:
-                metrics = data[tech][size]
-                aggregated[tech][size] = {
-                    'throughput': np.mean([m['throughput'] for m in metrics]),
-                    'latency_95': np.mean([m['latency_95'] for m in metrics]),
-                    'latency_99': np.mean([m['latency_99'] for m in metrics]),
-                    'messages': np.mean([m['messages'] for m in metrics])
-                }
-            else:
-                aggregated[tech][size] = {
-                    'throughput': 0,
-                    'latency_95': 0,
-                    'latency_99': 0,
-                    'messages': 0
-                }
+            aggregated[tech][size] = {}
+            for msg_size in data[tech][size]:
+                if data[tech][size][msg_size]:
+                    metrics = data[tech][size][msg_size]
+                    aggregated[tech][size][msg_size] = {
+                        'throughput': np.mean([m['throughput'] for m in metrics]),
+                        'latency_95': np.mean([m['latency_95'] for m in metrics]),
+                        'latency_99': np.mean([m['latency_99'] for m in metrics]),
+                        'messages': np.mean([m['messages'] for m in metrics])
+                    }
+                else:
+                    aggregated[tech][size][msg_size] = {
+                        'throughput': 0,
+                        'latency_95': 0,
+                        'latency_99': 0,
+                        'messages': 0
+                    }
     
     return aggregated
 
-def plot_throughput_comparison(data):
-    """Gráfico de comparação de throughput por size"""
+def plot_throughput_comparison(data, message_size):
+    """Gráfico de comparação de throughput por size para um message_size específico"""
     fig, ax = plt.subplots(figsize=(14, 8))
     
     sizes = ['size1', 'size2', 'size3', 'size4', 'size5']
@@ -86,9 +107,9 @@ def plot_throughput_comparison(data):
     width = 0.25
     
     # Barras para cada tecnologia
-    baseline_values = [data['baseline'][s]['throughput'] for s in sizes]
-    rabbitmq_values = [data['rabbitmq'][s]['throughput'] for s in sizes]
-    kafka_values = [data['kafka'][s]['throughput'] for s in sizes]
+    baseline_values = [data['baseline'][s][message_size]['throughput'] for s in sizes]
+    rabbitmq_values = [data['rabbitmq'][s][message_size]['throughput'] for s in sizes]
+    kafka_values = [data['kafka'][s][message_size]['throughput'] for s in sizes]
     
     bars1 = ax.bar(x - width, baseline_values, width, label='Baseline HTTP', color=COLORS['baseline'])
     bars2 = ax.bar(x, rabbitmq_values, width, label='RabbitMQ', color=COLORS['rabbitmq'])
@@ -102,22 +123,24 @@ def plot_throughput_comparison(data):
                 ax.text(bar.get_x() + bar.get_width()/2., height,
                        f'{height:.1f}', ha='center', va='bottom', fontsize=9)
     
+    msg_size_kb = message_size // 1024
     ax.set_xlabel('Size da Carga', fontsize=12, fontweight='bold')
     ax.set_ylabel('Throughput (msg/s)', fontsize=12, fontweight='bold')
-    ax.set_title('Comparação de Throughput por Size\n(Maior é melhor)', fontsize=14, fontweight='bold')
+    ax.set_title(f'Comparação de Throughput por Size - Message Size {msg_size_kb}KB\n(Maior é melhor)', 
+                fontsize=14, fontweight='bold')
     ax.set_xticks(x)
     ax.set_xticklabels(['Size 1\n(10²)', 'Size 2\n(10³)', 'Size 3\n(10⁴)', 'Size 4\n(10⁵)', 'Size 5\n(10⁶)'])
     ax.legend(loc='upper left', fontsize=11)
     ax.grid(True, alpha=0.3)
     
     plt.tight_layout()
-    filename = PLOTS_DIR / f"throughput_comparison_{datetime.now().strftime('%Y%m%d_%H%M%S')}.png"
+    filename = PLOTS_DIR / f"throughput_comparison_{msg_size_kb}KB_{datetime.now().strftime('%Y%m%d_%H%M%S')}.png"
     plt.savefig(filename, dpi=150, bbox_inches='tight')
     print(f"Gráfico salvo: {filename}")
     plt.close()
 
-def plot_latency_comparison(data):
-    """Gráfico de comparação de latências por size"""
+def plot_latency_comparison(data, message_size):
+    """Gráfico de comparação de latências por size para um message_size específico"""
     fig, axes = plt.subplots(1, 5, figsize=(20, 6))
     
     percentiles = ['P95', 'P99']
@@ -128,16 +151,16 @@ def plot_latency_comparison(data):
         
         # Dados de latência em milissegundos
         baseline_latencies = [
-            data['baseline'][size]['latency_95'] * 1000,
-            data['baseline'][size]['latency_99'] * 1000
+            data['baseline'][size][message_size]['latency_95'] * 1000,
+            data['baseline'][size][message_size]['latency_99'] * 1000
         ]
         rabbitmq_latencies = [
-            data['rabbitmq'][size]['latency_95'] * 1000,
-            data['rabbitmq'][size]['latency_99'] * 1000
+            data['rabbitmq'][size][message_size]['latency_95'] * 1000,
+            data['rabbitmq'][size][message_size]['latency_99'] * 1000
         ]
         kafka_latencies = [
-            data['kafka'][size]['latency_95'] * 1000,
-            data['kafka'][size]['latency_99'] * 1000
+            data['kafka'][size][message_size]['latency_95'] * 1000,
+            data['kafka'][size][message_size]['latency_99'] * 1000
         ]
         
         x = np.arange(len(percentiles))
@@ -165,15 +188,17 @@ def plot_latency_comparison(data):
         ax.legend(fontsize=9)
         ax.grid(True, alpha=0.3)
     
-    fig.suptitle('Comparação de Latências por Size\n(Menor é melhor)', fontsize=14, fontweight='bold', y=1.02)
+    msg_size_kb = message_size // 1024
+    fig.suptitle(f'Comparação de Latências por Size - Message Size {msg_size_kb}KB\n(Menor é melhor)', 
+                fontsize=14, fontweight='bold', y=1.02)
     plt.tight_layout()
-    filename = PLOTS_DIR / f"latency_comparison_{datetime.now().strftime('%Y%m%d_%H%M%S')}.png"
+    filename = PLOTS_DIR / f"latency_comparison_{msg_size_kb}KB_{datetime.now().strftime('%Y%m%d_%H%M%S')}.png"
     plt.savefig(filename, dpi=150, bbox_inches='tight')
     print(f"Gráfico salvo: {filename}")
     plt.close()
 
-def plot_summary_matrix(data):
-    """Matriz resumo com todos os resultados"""
+def plot_summary_matrix(data, message_size):
+    """Matriz resumo com todos os resultados para um message_size específico"""
     fig, axes = plt.subplots(2, 5, figsize=(20, 8))
     
     sizes = ['size1', 'size2', 'size3', 'size4', 'size5']
@@ -182,7 +207,7 @@ def plot_summary_matrix(data):
     # Linha 1: Throughput por size
     for idx, size in enumerate(sizes):
         ax = axes[0, idx]
-        values = [data[tech][size]['throughput'] for tech in techs]
+        values = [data[tech][size][message_size]['throughput'] for tech in techs]
         bars = ax.bar(techs, values, color=[COLORS[t] for t in techs])
         
         for bar, value in zip(bars, values):
@@ -198,7 +223,7 @@ def plot_summary_matrix(data):
     # Linha 2: Latência P99 por size
     for idx, size in enumerate(sizes):
         ax = axes[1, idx]
-        values = [data[tech][size]['latency_99'] * 1000 for tech in techs]  # Converter para ms
+        values = [data[tech][size][message_size]['latency_99'] * 1000 for tech in techs]  # Converter para ms
         bars = ax.bar(techs, values, color=[COLORS[t] for t in techs])
         
         for bar, value in zip(bars, values):
@@ -211,61 +236,71 @@ def plot_summary_matrix(data):
         ax.set_xticklabels(['Baseline', 'RabbitMQ', 'Kafka'], fontsize=8)
         ax.grid(True, alpha=0.3)
     
-    fig.suptitle('Matriz de Resultados - TCC Benchmark\nComparação entre Baseline, RabbitMQ e Kafka', 
+    msg_size_kb = message_size // 1024
+    fig.suptitle(f'Matriz de Resultados - TCC Benchmark (Message Size {msg_size_kb}KB)\nComparação entre Baseline, RabbitMQ e Kafka', 
                 fontsize=14, fontweight='bold', y=1.02)
     
     plt.tight_layout()
-    filename = PLOTS_DIR / f"summary_matrix_{datetime.now().strftime('%Y%m%d_%H%M%S')}.png"
+    filename = PLOTS_DIR / f"summary_matrix_{msg_size_kb}KB_{datetime.now().strftime('%Y%m%d_%H%M%S')}.png"
     plt.savefig(filename, dpi=150, bbox_inches='tight')
     print(f"Gráfico salvo: {filename}")
     plt.close()
 
 def generate_summary_table(data):
-    """Gera tabela resumo em formato texto"""
+    """Gera tabela resumo em formato texto para todos os message_sizes"""
     filename = PLOTS_DIR / f"summary_table_{datetime.now().strftime('%Y%m%d_%H%M%S')}.txt"
+    message_sizes = [1024, 10240, 102400]  # 1KB, 10KB, 100KB
     
     with open(filename, 'w') as f:
         f.write("=" * 80 + "\n")
         f.write("RESUMO DOS RESULTADOS - TCC BENCHMARK\n")
         f.write("=" * 80 + "\n\n")
         
-        for size in ['size1', 'size2', 'size3', 'size4', 'size5']:
-            msgs = {'size1': '100', 'size2': '1.000', 'size3': '10.000', 'size4': '100.000', 'size5': '1.000.000'}[size]
-            f.write(f"SIZE {size.upper()} ({msgs} mensagens)\n")
-            f.write("-" * 40 + "\n")
+        for msg_size in message_sizes:
+            msg_size_kb = msg_size // 1024
+            f.write("=" * 80 + "\n")
+            f.write(f"MESSAGE SIZE: {msg_size_kb}KB ({msg_size} bytes)\n")
+            f.write("=" * 80 + "\n\n")
             
-            # Cabeçalho
-            f.write(f"{'Tecnologia':<12} {'Throughput':<15} {'P95 (ms)':<12} {'P99 (ms)':<12}\n")
-            f.write("-" * 40 + "\n")
-            
-            # Dados
-            for tech in ['baseline', 'rabbitmq', 'kafka']:
-                throughput = data[tech][size]['throughput']
-                p95 = data[tech][size]['latency_95'] * 1000
-                p99 = data[tech][size]['latency_99'] * 1000
+            for size in ['size1', 'size2', 'size3', 'size4', 'size5']:
+                msgs = {'size1': '100', 'size2': '1.000', 'size3': '10.000', 'size4': '100.000', 'size5': '1.000.000'}[size]
+                f.write(f"SIZE {size.upper()} ({msgs} mensagens)\n")
+                f.write("-" * 40 + "\n")
                 
-                f.write(f"{tech.capitalize():<12} {throughput:<15.2f} {p95:<12.2f} {p99:<12.2f}\n")
+                # Cabeçalho
+                f.write(f"{'Tecnologia':<12} {'Throughput':<15} {'P95 (ms)':<12} {'P99 (ms)':<12}\n")
+                f.write("-" * 40 + "\n")
+                
+                # Dados
+                for tech in ['baseline', 'rabbitmq', 'kafka']:
+                    throughput = data[tech][size][msg_size]['throughput']
+                    p95 = data[tech][size][msg_size]['latency_95'] * 1000
+                    p99 = data[tech][size][msg_size]['latency_99'] * 1000
+                    
+                    f.write(f"{tech.capitalize():<12} {throughput:<15.2f} {p95:<12.2f} {p99:<12.2f}\n")
+                
+                f.write("\n")
+            
+            # Análise dos resultados por message_size
+            f.write("-" * 80 + "\n")
+            f.write(f"ANÁLISE DOS RESULTADOS - Message Size {msg_size_kb}KB\n")
+            f.write("-" * 80 + "\n\n")
+            
+            # Melhor throughput por size
+            for size in ['size1', 'size2', 'size3', 'size4', 'size5']:
+                best_tech = max(['baseline', 'rabbitmq', 'kafka'], 
+                              key=lambda t: data[t][size][msg_size]['throughput'])
+                f.write(f"Melhor throughput em size {size}: {best_tech.upper()}\n")
             
             f.write("\n")
-        
-        # Análise dos resultados
-        f.write("=" * 80 + "\n")
-        f.write("ANÁLISE DOS RESULTADOS\n")
-        f.write("=" * 80 + "\n\n")
-        
-        # Melhor throughput por size
-        for size in ['size1', 'size2', 'size3', 'size4', 'size5']:
-            best_tech = max(['baseline', 'rabbitmq', 'kafka'], 
-                          key=lambda t: data[t][size]['throughput'])
-            f.write(f"Melhor throughput em size {size}: {best_tech.upper()}\n")
-        
-        f.write("\n")
-        
-        # Menor latência P95 por size
-        for size in ['size1', 'size2', 'size3', 'size4', 'size5']:
-            best_tech = min(['baseline', 'rabbitmq', 'kafka'], 
-                          key=lambda t: data[t][size]['latency_95'] if data[t][size]['latency_95'] > 0 else float('inf'))
-            f.write(f"Menor latência P95 em size {size}: {best_tech.upper()}\n")
+            
+            # Menor latência P95 por size
+            for size in ['size1', 'size2', 'size3', 'size4', 'size5']:
+                best_tech = min(['baseline', 'rabbitmq', 'kafka'], 
+                              key=lambda t: data[t][size][msg_size]['latency_95'] if data[t][size][msg_size]['latency_95'] > 0 else float('inf'))
+                f.write(f"Menor latência P95 em size {size}: {best_tech.upper()}\n")
+            
+            f.write("\n\n")
     
     print(f"Tabela resumo salva: {filename}")
 
@@ -280,31 +315,42 @@ def main():
     
     # Verificar se há dados
     has_data = False
+    message_sizes = [1024, 10240, 102400]  # 1KB, 10KB, 100KB
     for tech in data:
         for size in data[tech]:
-            if data[tech][size]['throughput'] > 0:
-                has_data = True
+            for msg_size in message_sizes:
+                if data[tech][size][msg_size]['throughput'] > 0:
+                    has_data = True
+                    break
+            if has_data:
                 break
+        if has_data:
+            break
     
     if not has_data:
         print("Nenhum dado de benchmark encontrado!")
         print("Execute primeiro: ./execute_all.sh")
         return
     
-    # Gerar gráficos
+    # Gerar gráficos para cada message_size
     print("\nGerando visualizações...")
     
-    plot_throughput_comparison(data)
-    plot_latency_comparison(data)
-    plot_summary_matrix(data)
+    for msg_size in message_sizes:
+        msg_size_kb = msg_size // 1024
+        print(f"\nGerando gráficos para Message Size {msg_size_kb}KB...")
+        plot_throughput_comparison(data, msg_size)
+        plot_latency_comparison(data, msg_size)
+        plot_summary_matrix(data, msg_size)
+    
+    # Gerar tabela resumo consolidada
     generate_summary_table(data)
     
     print(f"\nTodos os gráficos foram gerados em: {PLOTS_DIR}")
     print("\nGráficos gerados:")
-    print("  • throughput_comparison_*.png - Comparação de throughput")
-    print("  • latency_comparison_*.png - Comparação de latências")
-    print("  • summary_matrix_*.png - Matriz resumo")
-    print("  • summary_table_*.txt - Tabela com todos os resultados")
+    print("  • throughput_comparison_*KB_*.png - Comparação de throughput por message size")
+    print("  • latency_comparison_*KB_*.png - Comparação de latências por message size")
+    print("  • summary_matrix_*KB_*.png - Matriz resumo por message size")
+    print("  • summary_table_*.txt - Tabela consolidada com todos os resultados")
 
 if __name__ == "__main__":
     main()

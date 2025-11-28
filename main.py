@@ -26,6 +26,11 @@ SIZES DE CARGA:
   size4:  100.000 mensagens
   size5:  1.000.000 mensagens
 
+TAMANHOS DE MENSAGEM:
+  --message-size 1024    : 1 KB (Padrão de mercado para "Pequeno")
+  --message-size 10240   : 10 KB (Objetos JSON complexos)
+  --message-size 102400  : 100 KB (Estressa rede e disco; "Grande")
+
 MÉTRICAS COLETADAS:
   • Latência: P95, P99 (em segundos)
   • Throughput: Mensagens por segundo
@@ -48,8 +53,8 @@ MÉTRICAS COLETADAS:
     parser.add_argument(
         "--message-size", 
         type=int, 
-        default=200, 
-        help="Tamanho de cada mensagem em bytes (padrão: 200)"
+        default=1024, 
+        help="Tamanho de cada mensagem em bytes (padrão: 1024 = 1KB). Valores recomendados: 1024, 10240, 102400"
     )
     
     # Modo servidor para baseline
