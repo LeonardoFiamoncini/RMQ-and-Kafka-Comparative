@@ -3,7 +3,7 @@
 # Script para executar todos os 45 cenários do benchmark TCC
 # Baseline, RabbitMQ e Kafka nos 5 sizes × 3 message-sizes
 # Sizes: size1, size2, size3, size4, size5
-# Message Sizes: 1KB, 10KB, 100KB
+# Message Sizes: 0.1KB, 1KB, 10KB
 #
 
 set -e
@@ -46,7 +46,7 @@ source venv/bin/activate
 # Array de sistemas, sizes e message sizes
 systems=("baseline" "rabbitmq" "kafka")
 sizes=("size1" "size2" "size3" "size4" "size5")
-message_sizes=(1024 10240 102400)  # 1KB, 10KB, 100KB em bytes
+message_sizes=(100 1000 10000)  # 0.1KB, 1KB, 10KB em bytes
 
 # Iniciar servidor baseline em background
 echo -e "${GREEN}Iniciando servidor Baseline...${NC}"

@@ -19,9 +19,9 @@ Este projeto compara o desempenho de:
    - **Size 4**: 100.000 mensagens
    - **Size 5**: 1.000.000 mensagens
 3. Avaliar impacto do tamanho das mensagens em 3 configurações:
-   - **1 KB**: Padrão de mercado para "Pequeno"
-   - **10 KB**: Representa objetos JSON complexos
-   - **100 KB**: Estressa a rede e o disco; "Grande"
+   - **100 bytes**: Equivalente a 0.1 KB
+   - **1.000 bytes**: Equivalente a 1 KB 
+   - **10.000 bytes**: Equivalente a 10 KB
 4. Fornecer dados objetivos para escolha de tecnologia
 
 ## Pré-requisitos
@@ -92,9 +92,9 @@ python3 main.py --server --port 5000 &
 python3 main.py --system <baseline|rabbitmq|kafka> --size <size1|size2|size3|size4|size5> [--message-size <bytes>]
 
 # Exemplos:
-python3 main.py --system baseline --size size1 --message-size 1024
-python3 main.py --system rabbitmq --size size2 --message-size 10240
-python3 main.py --system kafka --size size3 --message-size 102400
+python3 main.py --system baseline --size size1 --message-size 100
+python3 main.py --system rabbitmq --size size2 --message-size 1000
+python3 main.py --system kafka --size size3 --message-size 10000
 ```
 
 ### Gerar gráficos
@@ -124,7 +124,7 @@ Para cada cenário, são coletadas:
 - **Throughput**: Mensagens processadas por segundo
 - **Latência P95**: 95% das mensagens com latência menor que este valor
 - **Latência P99**: 99% das mensagens com latência menor que este valor
-- **Message Size**: Tamanho de cada mensagem em bytes (1KB, 10KB, 100KB)
+- **Message Size**: Tamanho de cada mensagem em bytes (100, 1.000, 10.000)
 
 ## Estrutura do Projeto
 

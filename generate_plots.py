@@ -32,7 +32,7 @@ def load_benchmark_data():
     """Carrega dados de benchmark de todos os sistemas com estrutura 3D (tech, size, message_size)"""
     # Estrutura 3D: data[tech][size][message_size] = []
     sizes = ['size1', 'size2', 'size3', 'size4', 'size5']
-    message_sizes = [1024, 10240, 102400]  # 1KB, 10KB, 100KB
+    message_sizes = [100, 1000, 10000]  # 1KB, 10KB, 100KB
     
     data = {}
     for tech in ['baseline', 'rabbitmq', 'kafka']:
@@ -52,18 +52,16 @@ def load_benchmark_data():
             reader = csv.DictReader(f)
             for row in reader:
                 size = row.get('size', '')
-                # Usar default 200 para compatibilidade com dados antigos
-                message_size = int(row.get('message_size', 200))
+                message_size = int(row.get('message_size', 100))
                 
                 # Normalizar message_size para valores conhecidos (compatibilidade)
                 if message_size not in message_sizes:
-                    # Se não for um dos valores esperados, usar o mais próximo
-                    if message_size <= 512:
-                        message_size = 1024
-                    elif message_size <= 5120:
-                        message_size = 10240
+                    if message_size <= 100:
+                        message_size = 100
+                    elif message_size <= 1000:
+                        message_size = 1000
                     else:
-                        message_size = 102400
+                        message_size = 10000
                 
                 if size in sizes and message_size in message_sizes:
                     data[tech][size][message_size].append({
@@ -249,7 +247,7 @@ def plot_summary_matrix(data, message_size):
 def generate_summary_table(data):
     """Gera tabela resumo em formato texto para todos os message_sizes"""
     filename = PLOTS_DIR / f"summary_table_{datetime.now().strftime('%Y%m%d_%H%M%S')}.txt"
-    message_sizes = [1024, 10240, 102400]  # 1KB, 10KB, 100KB
+    message_sizes = [100, 1000, 10000]  # 0.1KB, 1KB, 10KB
     
     with open(filename, 'w') as f:
         f.write("=" * 80 + "\n")
@@ -315,7 +313,7 @@ def main():
     
     # Verificar se há dados
     has_data = False
-    message_sizes = [1024, 10240, 102400]  # 1KB, 10KB, 100KB
+    message_sizes = [100, 1000, 10000]  # 0.1KB, 1KB, 10KB
     for tech in data:
         for size in data[tech]:
             for msg_size in message_sizes:
