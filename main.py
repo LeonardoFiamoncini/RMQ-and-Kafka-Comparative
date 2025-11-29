@@ -29,7 +29,6 @@ SIZES DE CARGA:
 TAMANHOS DE MENSAGEM:
   --message-size 100   : 0.1 KB
   --message-size 1000  : 1 KB
-  --message-size 10000 : 10 KB
 
 MÉTRICAS COLETADAS:
   • Latência: P95, P99 (em segundos)

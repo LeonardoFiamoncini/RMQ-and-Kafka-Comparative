@@ -18,10 +18,9 @@ Este projeto compara o desempenho de:
    - **Size 3**: 10.000 mensagens
    - **Size 4**: 100.000 mensagens
    - **Size 5**: 1.000.000 mensagens
-3. Avaliar impacto do tamanho das mensagens em 3 configurações:
+3. Avaliar impacto do tamanho das mensagens em 2 configurações:
    - **100 bytes**: Equivalente a 0.1 KB
    - **1.000 bytes**: Equivalente a 1 KB 
-   - **10.000 bytes**: Equivalente a 10 KB
 4. Fornecer dados objetivos para escolha de tecnologia
 
 ## Pré-requisitos
@@ -92,9 +91,8 @@ python3 main.py --server --port 5000 &
 python3 main.py --system <baseline|rabbitmq|kafka> --size <size1|size2|size3|size4|size5> [--message-size <bytes>]
 
 # Exemplos:
-python3 main.py --system baseline --size size1 --message-size 100
+python3 main.py --system kafka --size size1 --message-size 100
 python3 main.py --system rabbitmq --size size2 --message-size 1000
-python3 main.py --system kafka --size size3 --message-size 10000
 ```
 
 ### Gerar gráficos

@@ -32,7 +32,7 @@ def load_benchmark_data():
     """Carrega dados de benchmark de todos os sistemas com estrutura 3D (tech, size, message_size)"""
     # Estrutura 3D: data[tech][size][message_size] = []
     sizes = ['size1', 'size2', 'size3', 'size4', 'size5']
-    message_sizes = [100, 1000, 10000]  # 1KB, 10KB, 100KB
+    message_sizes = [100, 1000]  # 1KB, 10KB
     
     data = {}
     for tech in ['baseline', 'rabbitmq', 'kafka']:
@@ -58,11 +58,9 @@ def load_benchmark_data():
                 if message_size not in message_sizes:
                     if message_size <= 100:
                         message_size = 100
-                    elif message_size <= 1000:
-                        message_size = 1000
                     else:
-                        message_size = 10000
-                
+                        message_size = 1000
+
                 if size in sizes and message_size in message_sizes:
                     data[tech][size][message_size].append({
                         'throughput': float(row.get('throughput', 0)),
@@ -326,7 +324,7 @@ def plot_summary_matrix(data, message_size):
 def generate_summary_table(data):
     """Gera tabela resumo em formato texto para todos os message_sizes"""
     filename = PLOTS_DIR / f"summary_table_{datetime.now().strftime('%Y%m%d_%H%M%S')}.txt"
-    message_sizes = [100, 1000, 10000]  # 0.1KB, 1KB, 10KB
+    message_sizes = [100, 1000]  # 0.1KB, 1KB
     
     with open(filename, 'w') as f:
         f.write("=" * 80 + "\n")
@@ -391,7 +389,7 @@ def main():
     
     # Verificar se há dados
     has_data = False
-    message_sizes = [100, 1000, 10000]  # 0.1KB, 1KB, 10KB
+    message_sizes = [100, 1000]  # 0.1KB, 1KB
     for tech in data:
         for size in data[tech]:
             for msg_size in message_sizes:
@@ -414,10 +412,10 @@ def main():
     for msg_size in message_sizes:
         print(f"\nGerando gráficos para Message Size {msg_size} bytes...")
         plot_throughput_comparison(data, msg_size)
-        plot_latency_comparison(data, msg_size)
+        # plot_latency_comparison(data, msg_size)
         plot_latency_p95_by_size(data, msg_size)
         plot_latency_p99_by_size(data, msg_size)
-        plot_summary_matrix(data, msg_size)
+        # plot_summary_matrix(data, msg_size)
     
     # Gerar tabela resumo consolidada
     generate_summary_table(data)
@@ -425,10 +423,10 @@ def main():
     print(f"\nTodos os gráficos foram gerados em: {PLOTS_DIR}")
     print("\nGráficos gerados:")
     print("  • throughput_comparison_*bytes_*.png - Comparação de throughput por message size")
-    print("  • latency_comparison_*bytes_*.png - Comparação de latências por message size")
+    # print("  • latency_comparison_*bytes_*.png - Comparação de latências por message size")
     print("  • latency_p95_by_size_*bytes_*.png - Latência P95 por size")
     print("  • latency_p99_by_size_*bytes_*.png - Latência P99 por size")
-    print("  • summary_matrix_*bytes_*.png - Matriz resumo por message size")
+    # print("  • summary_matrix_*bytes_*.png - Matriz resumo por message size")
     print("  • summary_table_*.txt - Tabela consolidada com todos os resultados")
 
 if __name__ == "__main__":
