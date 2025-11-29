@@ -121,7 +121,7 @@ def plot_throughput_comparison(data, message_size):
                 ax.text(bar.get_x() + bar.get_width()/2., height,
                        f'{height:.1f}', ha='center', va='bottom', fontsize=9)
     
-    msg_size_kb = message_size // 1024
+    msg_size_kb = message_size // 1000
     ax.set_xlabel('Size da Carga', fontsize=12, fontweight='bold')
     ax.set_ylabel('Throughput (msg/s)', fontsize=12, fontweight='bold')
     ax.set_title(f'Comparação de Throughput por Size - Message Size {msg_size_kb}KB\n(Maior é melhor)', 
@@ -186,7 +186,7 @@ def plot_latency_comparison(data, message_size):
         ax.legend(fontsize=9)
         ax.grid(True, alpha=0.3)
     
-    msg_size_kb = message_size // 1024
+    msg_size_kb = message_size // 1000
     fig.suptitle(f'Comparação de Latências por Size - Message Size {msg_size_kb}KB\n(Menor é melhor)', 
                 fontsize=14, fontweight='bold', y=1.02)
     plt.tight_layout()
@@ -234,7 +234,7 @@ def plot_summary_matrix(data, message_size):
         ax.set_xticklabels(['Baseline', 'RabbitMQ', 'Kafka'], fontsize=8)
         ax.grid(True, alpha=0.3)
     
-    msg_size_kb = message_size // 1024
+    msg_size_kb = message_size // 1000
     fig.suptitle(f'Matriz de Resultados - TCC Benchmark (Message Size {msg_size_kb}KB)\nComparação entre Baseline, RabbitMQ e Kafka', 
                 fontsize=14, fontweight='bold', y=1.02)
     
@@ -255,7 +255,7 @@ def generate_summary_table(data):
         f.write("=" * 80 + "\n\n")
         
         for msg_size in message_sizes:
-            msg_size_kb = msg_size // 1024
+            msg_size_kb = msg_size // 1000
             f.write("=" * 80 + "\n")
             f.write(f"MESSAGE SIZE: {msg_size_kb}KB ({msg_size} bytes)\n")
             f.write("=" * 80 + "\n\n")
@@ -334,7 +334,7 @@ def main():
     print("\nGerando visualizações...")
     
     for msg_size in message_sizes:
-        msg_size_kb = msg_size // 1024
+        msg_size_kb = msg_size // 1000
         print(f"\nGerando gráficos para Message Size {msg_size_kb}KB...")
         plot_throughput_comparison(data, msg_size)
         plot_latency_comparison(data, msg_size)
