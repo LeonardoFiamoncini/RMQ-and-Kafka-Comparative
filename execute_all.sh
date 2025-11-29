@@ -25,7 +25,7 @@ rm -rf logs/*
 
 # Parar e reiniciar containers
 echo -e "${YELLOW}Reiniciando containers Docker...${NC}"
-docker compose down
+docker compose down --remove-orphans
 docker compose up -d
 
 # Aguardar containers iniciarem
@@ -70,6 +70,13 @@ for system in "${systems[@]}"; do
             msg_size_kb=$((msg_size / 1024))
             echo -e "\n${GREEN}▶ [${current_scenario}/${total_scenarios}] Executando ${system} - Size ${size} - Message Size ${msg_size_kb}KB${NC}"
             python3 main.py --system $system --size $size --message-size $msg_size || true
+
+            # Limpando tópico Kafka - apenas se o sistema for "kafka", de fato
+            if [ "$system" == "kafka" ]; then
+                echo -e "${YELLOW}Limpando tópico Kafka...${NC}"
+                chmod +x scripts/clear_kafka_topic.sh
+                ./scripts/clear_kafka_topic.sh
+            fi
             
             # Pequena pausa entre execuções
             sleep 2
