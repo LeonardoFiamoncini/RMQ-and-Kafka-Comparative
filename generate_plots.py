@@ -121,10 +121,9 @@ def plot_throughput_comparison(data, message_size):
                 ax.text(bar.get_x() + bar.get_width()/2., height,
                        f'{height:.1f}', ha='center', va='bottom', fontsize=9)
     
-    msg_size_kb = message_size // 1000
     ax.set_xlabel('Size da Carga', fontsize=12, fontweight='bold')
     ax.set_ylabel('Throughput (msg/s)', fontsize=12, fontweight='bold')
-    ax.set_title(f'Comparação de Throughput por Size - Message Size {msg_size_kb}KB\n(Maior é melhor)', 
+    ax.set_title(f'Comparação de Throughput por Size - Message Size {message_size} bytes\n(Maior é melhor)',
                 fontsize=14, fontweight='bold')
     ax.set_xticks(x)
     ax.set_xticklabels(['Size 1\n(10²)', 'Size 2\n(10³)', 'Size 3\n(10⁴)', 'Size 4\n(10⁵)', 'Size 5\n(10⁶)'])
@@ -132,7 +131,7 @@ def plot_throughput_comparison(data, message_size):
     ax.grid(True, alpha=0.3)
     
     plt.tight_layout()
-    filename = PLOTS_DIR / f"throughput_comparison_{msg_size_kb}KB_{datetime.now().strftime('%Y%m%d_%H%M%S')}.png"
+    filename = PLOTS_DIR / f"throughput_comparison_{message_size}bytes_{datetime.now().strftime('%Y%m%d_%H%M%S')}.png"
     plt.savefig(filename, dpi=150, bbox_inches='tight')
     print(f"Gráfico salvo: {filename}")
     plt.close()
@@ -186,11 +185,90 @@ def plot_latency_comparison(data, message_size):
         ax.legend(fontsize=9)
         ax.grid(True, alpha=0.3)
     
-    msg_size_kb = message_size // 1000
-    fig.suptitle(f'Comparação de Latências por Size - Message Size {msg_size_kb}KB\n(Menor é melhor)', 
+    fig.suptitle(f'Comparação de Latências por Size - Message Size {message_size} bytes\n(Menor é melhor)',
                 fontsize=14, fontweight='bold', y=1.02)
     plt.tight_layout()
-    filename = PLOTS_DIR / f"latency_comparison_{msg_size_kb}KB_{datetime.now().strftime('%Y%m%d_%H%M%S')}.png"
+    filename = PLOTS_DIR / f"latency_comparison_{message_size}bytes_{datetime.now().strftime('%Y%m%d_%H%M%S')}.png"
+    plt.savefig(filename, dpi=150, bbox_inches='tight')
+    print(f"Gráfico salvo: {filename}")
+    plt.close()
+
+def plot_latency_p95_by_size(data, message_size):
+    """Gráfico de latência P95 para todos os sizes"""
+    fig, ax = plt.subplots(figsize=(14, 8))
+    
+    sizes = ['size1', 'size2', 'size3', 'size4', 'size5']
+    x = np.arange(len(sizes))
+    width = 0.25
+    
+    # Barras para cada tecnologia
+    baseline_values = [data['baseline'][s][message_size]['latency_95'] * 1000 for s in sizes]
+    rabbitmq_values = [data['rabbitmq'][s][message_size]['latency_95'] * 1000 for s in sizes]
+    kafka_values = [data['kafka'][s][message_size]['latency_95'] * 1000 for s in sizes]
+    
+    bars1 = ax.bar(x - width, baseline_values, width, label='Baseline HTTP', color=COLORS['baseline'])
+    bars2 = ax.bar(x, rabbitmq_values, width, label='RabbitMQ', color=COLORS['rabbitmq'])
+    bars3 = ax.bar(x + width, kafka_values, width, label='Kafka', color=COLORS['kafka'])
+    
+    # Adicionar valores nas barras
+    for bars in [bars1, bars2, bars3]:
+        for bar in bars:
+            height = bar.get_height()
+            if height > 0:
+                ax.text(bar.get_x() + bar.get_width()/2., height,
+                       f'{height:.1f}', ha='center', va='bottom', fontsize=9)
+    
+    ax.set_xlabel('Size da Carga', fontsize=12, fontweight='bold')
+    ax.set_ylabel('Latência P95 (ms)', fontsize=12, fontweight='bold')
+    ax.set_title(f'Latência P95 por Size - Message Size {message_size} bytes\n(Menor é melhor)',
+                fontsize=14, fontweight='bold')
+    ax.set_xticks(x)
+    ax.set_xticklabels(['Size 1\n(10²)', 'Size 2\n(10³)', 'Size 3\n(10⁴)', 'Size 4\n(10⁵)', 'Size 5\n(10⁶)'])
+    ax.legend(loc='upper left', fontsize=11)
+    ax.grid(True, alpha=0.3)
+    
+    plt.tight_layout()
+    filename = PLOTS_DIR / f"latency_p95_by_size_{message_size}bytes_{datetime.now().strftime('%Y%m%d_%H%M%S')}.png"
+    plt.savefig(filename, dpi=150, bbox_inches='tight')
+    print(f"Gráfico salvo: {filename}")
+    plt.close()
+
+def plot_latency_p99_by_size(data, message_size):
+    """Gráfico de latência P99 para todos os sizes"""
+    fig, ax = plt.subplots(figsize=(14, 8))
+    
+    sizes = ['size1', 'size2', 'size3', 'size4', 'size5']
+    x = np.arange(len(sizes))
+    width = 0.25
+    
+    # Barras para cada tecnologia
+    baseline_values = [data['baseline'][s][message_size]['latency_99'] * 1000 for s in sizes]
+    rabbitmq_values = [data['rabbitmq'][s][message_size]['latency_99'] * 1000 for s in sizes]
+    kafka_values = [data['kafka'][s][message_size]['latency_99'] * 1000 for s in sizes]
+    
+    bars1 = ax.bar(x - width, baseline_values, width, label='Baseline HTTP', color=COLORS['baseline'])
+    bars2 = ax.bar(x, rabbitmq_values, width, label='RabbitMQ', color=COLORS['rabbitmq'])
+    bars3 = ax.bar(x + width, kafka_values, width, label='Kafka', color=COLORS['kafka'])
+    
+    # Adicionar valores nas barras
+    for bars in [bars1, bars2, bars3]:
+        for bar in bars:
+            height = bar.get_height()
+            if height > 0:
+                ax.text(bar.get_x() + bar.get_width()/2., height,
+                       f'{height:.1f}', ha='center', va='bottom', fontsize=9)
+    
+    ax.set_xlabel('Size da Carga', fontsize=12, fontweight='bold')
+    ax.set_ylabel('Latência P99 (ms)', fontsize=12, fontweight='bold')
+    ax.set_title(f'Latência P99 por Size - Message Size {message_size} bytes\n(Menor é melhor)',
+                fontsize=14, fontweight='bold')
+    ax.set_xticks(x)
+    ax.set_xticklabels(['Size 1\n(10²)', 'Size 2\n(10³)', 'Size 3\n(10⁴)', 'Size 4\n(10⁵)', 'Size 5\n(10⁶)'])
+    ax.legend(loc='upper left', fontsize=11)
+    ax.grid(True, alpha=0.3)
+    
+    plt.tight_layout()
+    filename = PLOTS_DIR / f"latency_p99_by_size_{message_size}bytes_{datetime.now().strftime('%Y%m%d_%H%M%S')}.png"
     plt.savefig(filename, dpi=150, bbox_inches='tight')
     print(f"Gráfico salvo: {filename}")
     plt.close()
@@ -215,6 +293,7 @@ def plot_summary_matrix(data, message_size):
         
         ax.set_title(f'Throughput - Size {size[-1]}', fontweight='bold', fontsize=10)
         ax.set_ylabel('msg/s', fontsize=9)
+        ax.set_xticks(range(len(techs)))
         ax.set_xticklabels(['Baseline', 'RabbitMQ', 'Kafka'], fontsize=8)
         ax.grid(True, alpha=0.3)
     
@@ -231,15 +310,15 @@ def plot_summary_matrix(data, message_size):
         
         ax.set_title(f'Latência P99 - Size {size[-1]}', fontweight='bold', fontsize=10)
         ax.set_ylabel('ms', fontsize=9)
+        ax.set_xticks(range(len(techs)))
         ax.set_xticklabels(['Baseline', 'RabbitMQ', 'Kafka'], fontsize=8)
         ax.grid(True, alpha=0.3)
     
-    msg_size_kb = message_size // 1000
-    fig.suptitle(f'Matriz de Resultados - TCC Benchmark (Message Size {msg_size_kb}KB)\nComparação entre Baseline, RabbitMQ e Kafka', 
+    fig.suptitle(f'Matriz de Resultados - TCC Benchmark (Message Size {message_size} bytes)\nComparação entre Baseline, RabbitMQ e Kafka',
                 fontsize=14, fontweight='bold', y=1.02)
     
     plt.tight_layout()
-    filename = PLOTS_DIR / f"summary_matrix_{msg_size_kb}KB_{datetime.now().strftime('%Y%m%d_%H%M%S')}.png"
+    filename = PLOTS_DIR / f"summary_matrix_{message_size}bytes_{datetime.now().strftime('%Y%m%d_%H%M%S')}.png"
     plt.savefig(filename, dpi=150, bbox_inches='tight')
     print(f"Gráfico salvo: {filename}")
     plt.close()
@@ -255,9 +334,8 @@ def generate_summary_table(data):
         f.write("=" * 80 + "\n\n")
         
         for msg_size in message_sizes:
-            msg_size_kb = msg_size // 1000
             f.write("=" * 80 + "\n")
-            f.write(f"MESSAGE SIZE: {msg_size_kb}KB ({msg_size} bytes)\n")
+            f.write(f"MESSAGE SIZE: {msg_size} bytes ({msg_size} bytes)\n")
             f.write("=" * 80 + "\n\n")
             
             for size in ['size1', 'size2', 'size3', 'size4', 'size5']:
@@ -281,7 +359,7 @@ def generate_summary_table(data):
             
             # Análise dos resultados por message_size
             f.write("-" * 80 + "\n")
-            f.write(f"ANÁLISE DOS RESULTADOS - Message Size {msg_size_kb}KB\n")
+            f.write(f"ANÁLISE DOS RESULTADOS - Message Size {msg_size}bytes\n")
             f.write("-" * 80 + "\n\n")
             
             # Melhor throughput por size
@@ -334,10 +412,11 @@ def main():
     print("\nGerando visualizações...")
     
     for msg_size in message_sizes:
-        msg_size_kb = msg_size // 1000
-        print(f"\nGerando gráficos para Message Size {msg_size_kb}KB...")
+        print(f"\nGerando gráficos para Message Size {msg_size} bytes...")
         plot_throughput_comparison(data, msg_size)
         plot_latency_comparison(data, msg_size)
+        plot_latency_p95_by_size(data, msg_size)
+        plot_latency_p99_by_size(data, msg_size)
         plot_summary_matrix(data, msg_size)
     
     # Gerar tabela resumo consolidada
@@ -345,9 +424,11 @@ def main():
     
     print(f"\nTodos os gráficos foram gerados em: {PLOTS_DIR}")
     print("\nGráficos gerados:")
-    print("  • throughput_comparison_*KB_*.png - Comparação de throughput por message size")
-    print("  • latency_comparison_*KB_*.png - Comparação de latências por message size")
-    print("  • summary_matrix_*KB_*.png - Matriz resumo por message size")
+    print("  • throughput_comparison_*bytes_*.png - Comparação de throughput por message size")
+    print("  • latency_comparison_*bytes_*.png - Comparação de latências por message size")
+    print("  • latency_p95_by_size_*bytes_*.png - Latência P95 por size")
+    print("  • latency_p99_by_size_*bytes_*.png - Latência P99 por size")
+    print("  • summary_matrix_*bytes_*.png - Matriz resumo por message size")
     print("  • summary_table_*.txt - Tabela consolidada com todos os resultados")
 
 if __name__ == "__main__":
