@@ -14,7 +14,7 @@ from datetime import datetime
 # Configuração de estilo
 plt.style.use('seaborn-v0_8-darkgrid')
 plt.rcParams['figure.figsize'] = (12, 8)
-plt.rcParams['font.size'] = 11
+plt.rcParams['font.size'] = 15
 
 # Diretórios
 LOGS_DIR = Path("logs")
@@ -117,15 +117,15 @@ def plot_throughput_comparison(data, message_size):
             height = bar.get_height()
             if height > 0:
                 ax.text(bar.get_x() + bar.get_width()/2., height,
-                       f'{height:.1f}', ha='center', va='bottom', fontsize=9)
+                       f'{height:.1f}', ha='center', va='bottom', fontsize=13)
     
-    ax.set_xlabel('Quantidade de mensagens', fontsize=12, fontweight='bold')
-    ax.set_ylabel('Throughput (msg/s)', fontsize=12, fontweight='bold')
+    ax.set_xlabel('Quantidade de mensagens', fontsize=16, fontweight='bold', labelpad=10)
+    ax.set_ylabel('Throughput (msg/s)', fontsize=16, fontweight='bold', labelpad=10)
     ax.set_title(f'Comparação de Throughput por Size - Message Size {message_size} bytes\n(Maior é melhor)',
-                fontsize=14, fontweight='bold')
+                fontsize=18, fontweight='bold')
     ax.set_xticks(x)
     ax.set_xticklabels(['100', '1.000', '10.000', '100.000', '1.000.000'])
-    ax.legend(loc='upper left', fontsize=11)
+    ax.legend(loc='upper left', fontsize=15)
     ax.grid(True, alpha=0.3)
     
     plt.tight_layout()
@@ -171,20 +171,20 @@ def plot_latency_comparison(data, message_size):
                 height = bar.get_height()
                 if height > 0:
                     ax.text(bar.get_x() + bar.get_width()/2., height,
-                           f'{height:.1f}', ha='center', va='bottom', fontsize=8)
+                           f'{height:.1f}', ha='center', va='bottom', fontsize=12)
         
-        ax.set_xlabel('Percentil', fontsize=10)
-        ax.set_ylabel('Latência (ms)' if idx == 0 else '', fontsize=10)
+        ax.set_xlabel('Percentil', fontsize=14, labelpad=8)
+        ax.set_ylabel('Latência (ms)' if idx == 0 else '', fontsize=14, labelpad=8)
         msgs_map = {"size1": "10²", "size2": "10³", "size3": "10⁴", "size4": "10⁵", "size5": "10⁶"}
         ax.set_title(f'Size {size[-1]}\n({msgs_map[size]})', 
-                    fontsize=11, fontweight='bold')
+                    fontsize=15, fontweight='bold')
         ax.set_xticks(x)
         ax.set_xticklabels(percentiles)
-        ax.legend(fontsize=9)
+        ax.legend(fontsize=13)
         ax.grid(True, alpha=0.3)
     
     fig.suptitle(f'Comparação de Latências por Size - Message Size {message_size} bytes\n(Menor é melhor)',
-                fontsize=14, fontweight='bold', y=1.02)
+                fontsize=18, fontweight='bold', y=1.02)
     plt.tight_layout()
     filename = PLOTS_DIR / f"latency_comparison_{message_size}bytes_{datetime.now().strftime('%Y%m%d_%H%M%S')}.png"
     plt.savefig(filename, dpi=150, bbox_inches='tight')
@@ -214,15 +214,15 @@ def plot_latency_p95_by_size(data, message_size):
             height = bar.get_height()
             if height > 0:
                 ax.text(bar.get_x() + bar.get_width()/2., height,
-                       f'{height:.1f}', ha='center', va='bottom', fontsize=9)
+                       f'{height:.1f}', ha='center', va='bottom', fontsize=13)
     
-    ax.set_xlabel('Quantidade de mensagens', fontsize=12, fontweight='bold')
-    ax.set_ylabel('Latência P95 (ms)', fontsize=12, fontweight='bold')
+    ax.set_xlabel('Quantidade de mensagens', fontsize=16, fontweight='bold', labelpad=10)
+    ax.set_ylabel('Latência P95 (ms)', fontsize=16, fontweight='bold', labelpad=10)
     ax.set_title(f'Latência P95 por Size - Message Size {message_size} bytes\n(Menor é melhor)',
-                fontsize=14, fontweight='bold')
+                fontsize=18, fontweight='bold')
     ax.set_xticks(x)
     ax.set_xticklabels(['100', '1.000', '10.000', '100.000', '1.000.000'])
-    ax.legend(loc='upper left', fontsize=11)
+    ax.legend(loc='upper left', fontsize=15)
     ax.grid(True, alpha=0.3)
     
     plt.tight_layout()
@@ -254,15 +254,15 @@ def plot_latency_p99_by_size(data, message_size):
             height = bar.get_height()
             if height > 0:
                 ax.text(bar.get_x() + bar.get_width()/2., height,
-                       f'{height:.1f}', ha='center', va='bottom', fontsize=9)
+                       f'{height:.1f}', ha='center', va='bottom', fontsize=13)
     
-    ax.set_xlabel('Quantidade de mensagens', fontsize=12, fontweight='bold')
-    ax.set_ylabel('Latência P99 (ms)', fontsize=12, fontweight='bold')
+    ax.set_xlabel('Quantidade de mensagens', fontsize=16, fontweight='bold', labelpad=10)
+    ax.set_ylabel('Latência P99 (ms)', fontsize=16, fontweight='bold', labelpad=10)
     ax.set_title(f'Latência P99 por Size - Message Size {message_size} bytes\n(Menor é melhor)',
-                fontsize=14, fontweight='bold')
+                fontsize=18, fontweight='bold')
     ax.set_xticks(x)
     ax.set_xticklabels(['100', '1.000', '10.000', '100.000', '1.000.000'])
-    ax.legend(loc='upper left', fontsize=11)
+    ax.legend(loc='upper left', fontsize=15)
     ax.grid(True, alpha=0.3)
     
     plt.tight_layout()
@@ -287,12 +287,12 @@ def plot_summary_matrix(data, message_size):
         for bar, value in zip(bars, values):
             if value > 0:
                 ax.text(bar.get_x() + bar.get_width()/2., value,
-                       f'{value:.1f}', ha='center', va='bottom', fontsize=8)
+                       f'{value:.1f}', ha='center', va='bottom', fontsize=12)
         
-        ax.set_title(f'Throughput - Size {size[-1]}', fontweight='bold', fontsize=10)
-        ax.set_ylabel('msg/s', fontsize=9)
+        ax.set_title(f'Throughput - Size {size[-1]}', fontweight='bold', fontsize=14)
+        ax.set_ylabel('msg/s', fontsize=13, labelpad=8)
         ax.set_xticks(range(len(techs)))
-        ax.set_xticklabels(['Baseline', 'RabbitMQ', 'Kafka'], fontsize=8)
+        ax.set_xticklabels(['Baseline', 'RabbitMQ', 'Kafka'], fontsize=12)
         ax.grid(True, alpha=0.3)
     
     # Linha 2: Latência P99 por size
@@ -304,16 +304,16 @@ def plot_summary_matrix(data, message_size):
         for bar, value in zip(bars, values):
             if value > 0:
                 ax.text(bar.get_x() + bar.get_width()/2., value,
-                       f'{value:.1f}', ha='center', va='bottom', fontsize=8)
+                       f'{value:.1f}', ha='center', va='bottom', fontsize=12)
         
-        ax.set_title(f'Latência P99 - Size {size[-1]}', fontweight='bold', fontsize=10)
-        ax.set_ylabel('ms', fontsize=9)
+        ax.set_title(f'Latência P99 - Size {size[-1]}', fontweight='bold', fontsize=14)
+        ax.set_ylabel('ms', fontsize=13, labelpad=8)
         ax.set_xticks(range(len(techs)))
-        ax.set_xticklabels(['Baseline', 'RabbitMQ', 'Kafka'], fontsize=8)
+        ax.set_xticklabels(['Baseline', 'RabbitMQ', 'Kafka'], fontsize=12)
         ax.grid(True, alpha=0.3)
     
     fig.suptitle(f'Matriz de Resultados - TCC Benchmark (Message Size {message_size} bytes)\nComparação entre Baseline, RabbitMQ e Kafka',
-                fontsize=14, fontweight='bold', y=1.02)
+                fontsize=18, fontweight='bold', y=1.02)
     
     plt.tight_layout()
     filename = PLOTS_DIR / f"summary_matrix_{message_size}bytes_{datetime.now().strftime('%Y%m%d_%H%M%S')}.png"
