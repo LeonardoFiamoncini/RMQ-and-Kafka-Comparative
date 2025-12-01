@@ -107,9 +107,9 @@ def plot_throughput_comparison(data, message_size):
     rabbitmq_values = [data['rabbitmq'][s][message_size]['throughput'] for s in sizes]
     kafka_values = [data['kafka'][s][message_size]['throughput'] for s in sizes]
     
-    bars1 = ax.bar(x - width, baseline_values, width, label='Baseline HTTP', color=COLORS['baseline'])
+    bars1 = ax.bar(x - width, baseline_values, width, label='Baseline', color=COLORS['baseline'])
     bars2 = ax.bar(x, rabbitmq_values, width, label='RabbitMQ', color=COLORS['rabbitmq'])
-    bars3 = ax.bar(x + width, kafka_values, width, label='Kafka', color=COLORS['kafka'])
+    bars3 = ax.bar(x + width, kafka_values, width, label='Apache Kafka', color=COLORS['kafka'])
     
     # Adicionar valores nas barras
     for bars in [bars1, bars2, bars3]:
@@ -119,12 +119,12 @@ def plot_throughput_comparison(data, message_size):
                 ax.text(bar.get_x() + bar.get_width()/2., height,
                        f'{height:.1f}', ha='center', va='bottom', fontsize=9)
     
-    ax.set_xlabel('Size da Carga', fontsize=12, fontweight='bold')
+    ax.set_xlabel('Quantidade de mensagens', fontsize=12, fontweight='bold')
     ax.set_ylabel('Throughput (msg/s)', fontsize=12, fontweight='bold')
     ax.set_title(f'Comparação de Throughput por Size - Message Size {message_size} bytes\n(Maior é melhor)',
                 fontsize=14, fontweight='bold')
     ax.set_xticks(x)
-    ax.set_xticklabels(['Size 1\n(10²)', 'Size 2\n(10³)', 'Size 3\n(10⁴)', 'Size 4\n(10⁵)', 'Size 5\n(10⁶)'])
+    ax.set_xticklabels(['10²', '10³', '10⁴', '10⁵', '10⁶'])
     ax.legend(loc='upper left', fontsize=11)
     ax.grid(True, alpha=0.3)
     
@@ -163,7 +163,7 @@ def plot_latency_comparison(data, message_size):
         
         bars1 = ax.bar(x - width, baseline_latencies, width, label='Baseline', color=COLORS['baseline'])
         bars2 = ax.bar(x, rabbitmq_latencies, width, label='RabbitMQ', color=COLORS['rabbitmq'])
-        bars3 = ax.bar(x + width, kafka_latencies, width, label='Kafka', color=COLORS['kafka'])
+        bars3 = ax.bar(x + width, kafka_latencies, width, label='Apache Kafka', color=COLORS['kafka'])
         
         # Adicionar valores nas barras
         for bars in [bars1, bars2, bars3]:
@@ -204,9 +204,9 @@ def plot_latency_p95_by_size(data, message_size):
     rabbitmq_values = [data['rabbitmq'][s][message_size]['latency_95'] * 1000 for s in sizes]
     kafka_values = [data['kafka'][s][message_size]['latency_95'] * 1000 for s in sizes]
     
-    bars1 = ax.bar(x - width, baseline_values, width, label='Baseline HTTP', color=COLORS['baseline'])
+    bars1 = ax.bar(x - width, baseline_values, width, label='Baseline', color=COLORS['baseline'])
     bars2 = ax.bar(x, rabbitmq_values, width, label='RabbitMQ', color=COLORS['rabbitmq'])
-    bars3 = ax.bar(x + width, kafka_values, width, label='Kafka', color=COLORS['kafka'])
+    bars3 = ax.bar(x + width, kafka_values, width, label='Apache Kafka', color=COLORS['kafka'])
     
     # Adicionar valores nas barras
     for bars in [bars1, bars2, bars3]:
@@ -216,12 +216,12 @@ def plot_latency_p95_by_size(data, message_size):
                 ax.text(bar.get_x() + bar.get_width()/2., height,
                        f'{height:.1f}', ha='center', va='bottom', fontsize=9)
     
-    ax.set_xlabel('Size da Carga', fontsize=12, fontweight='bold')
+    ax.set_xlabel('Quantidade de mensagens', fontsize=12, fontweight='bold')
     ax.set_ylabel('Latência P95 (ms)', fontsize=12, fontweight='bold')
     ax.set_title(f'Latência P95 por Size - Message Size {message_size} bytes\n(Menor é melhor)',
                 fontsize=14, fontweight='bold')
     ax.set_xticks(x)
-    ax.set_xticklabels(['Size 1\n(10²)', 'Size 2\n(10³)', 'Size 3\n(10⁴)', 'Size 4\n(10⁵)', 'Size 5\n(10⁶)'])
+    ax.set_xticklabels(['10²', '10³', '10⁴', '10⁵', '10⁶'])
     ax.legend(loc='upper left', fontsize=11)
     ax.grid(True, alpha=0.3)
     
@@ -244,9 +244,9 @@ def plot_latency_p99_by_size(data, message_size):
     rabbitmq_values = [data['rabbitmq'][s][message_size]['latency_99'] * 1000 for s in sizes]
     kafka_values = [data['kafka'][s][message_size]['latency_99'] * 1000 for s in sizes]
     
-    bars1 = ax.bar(x - width, baseline_values, width, label='Baseline HTTP', color=COLORS['baseline'])
+    bars1 = ax.bar(x - width, baseline_values, width, label='Baseline', color=COLORS['baseline'])
     bars2 = ax.bar(x, rabbitmq_values, width, label='RabbitMQ', color=COLORS['rabbitmq'])
-    bars3 = ax.bar(x + width, kafka_values, width, label='Kafka', color=COLORS['kafka'])
+    bars3 = ax.bar(x + width, kafka_values, width, label='Apache Kafka', color=COLORS['kafka'])
     
     # Adicionar valores nas barras
     for bars in [bars1, bars2, bars3]:
@@ -256,12 +256,12 @@ def plot_latency_p99_by_size(data, message_size):
                 ax.text(bar.get_x() + bar.get_width()/2., height,
                        f'{height:.1f}', ha='center', va='bottom', fontsize=9)
     
-    ax.set_xlabel('Size da Carga', fontsize=12, fontweight='bold')
+    ax.set_xlabel('Quantidade de mensagens', fontsize=12, fontweight='bold')
     ax.set_ylabel('Latência P99 (ms)', fontsize=12, fontweight='bold')
     ax.set_title(f'Latência P99 por Size - Message Size {message_size} bytes\n(Menor é melhor)',
                 fontsize=14, fontweight='bold')
     ax.set_xticks(x)
-    ax.set_xticklabels(['Size 1\n(10²)', 'Size 2\n(10³)', 'Size 3\n(10⁴)', 'Size 4\n(10⁵)', 'Size 5\n(10⁶)'])
+    ax.set_xticklabels(['10²', '10³', '10⁴', '10⁵', '10⁶'])
     ax.legend(loc='upper left', fontsize=11)
     ax.grid(True, alpha=0.3)
     
