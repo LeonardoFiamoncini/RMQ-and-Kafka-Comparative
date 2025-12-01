@@ -124,7 +124,7 @@ def plot_throughput_comparison(data, message_size):
     ax.set_title(f'Comparação de Throughput por Size - Message Size {message_size} bytes\n(Maior é melhor)',
                 fontsize=14, fontweight='bold')
     ax.set_xticks(x)
-    ax.set_xticklabels(['10²', '10³', '10⁴', '10⁵', '10⁶'])
+    ax.set_xticklabels(['100', '1.000', '10.000', '100.000', '1.000.000'])
     ax.legend(loc='upper left', fontsize=11)
     ax.grid(True, alpha=0.3)
     
@@ -221,7 +221,7 @@ def plot_latency_p95_by_size(data, message_size):
     ax.set_title(f'Latência P95 por Size - Message Size {message_size} bytes\n(Menor é melhor)',
                 fontsize=14, fontweight='bold')
     ax.set_xticks(x)
-    ax.set_xticklabels(['10²', '10³', '10⁴', '10⁵', '10⁶'])
+    ax.set_xticklabels(['100', '1.000', '10.000', '100.000', '1.000.000'])
     ax.legend(loc='upper left', fontsize=11)
     ax.grid(True, alpha=0.3)
     
@@ -261,7 +261,7 @@ def plot_latency_p99_by_size(data, message_size):
     ax.set_title(f'Latência P99 por Size - Message Size {message_size} bytes\n(Menor é melhor)',
                 fontsize=14, fontweight='bold')
     ax.set_xticks(x)
-    ax.set_xticklabels(['10²', '10³', '10⁴', '10⁵', '10⁶'])
+    ax.set_xticklabels(['100', '1.000', '10.000', '100.000', '1.000.000'])
     ax.legend(loc='upper left', fontsize=11)
     ax.grid(True, alpha=0.3)
     
