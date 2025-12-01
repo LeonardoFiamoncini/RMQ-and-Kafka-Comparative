@@ -67,8 +67,7 @@ for system in "${systems[@]}"; do
     for size in "${sizes[@]}"; do
         for msg_size in "${message_sizes[@]}"; do
             current_scenario=$((current_scenario + 1))
-            msg_size_kb=$((msg_size / 1000))
-            echo -e "\n${GREEN}▶ [${current_scenario}/${total_scenarios}] Executando ${system} - Size ${size} - Message Size ${msg_size_kb}KB${NC}"
+            echo -e "\n${GREEN}▶ [${current_scenario}/${total_scenarios}] Executando ${system} - Size ${size} - Message Size ${msg_size} bytes${NC}"
             python3 main.py --system $system --size $size --message-size $msg_size || true
 
             # Limpando tópico Kafka - apenas se o sistema for "kafka", de fato
