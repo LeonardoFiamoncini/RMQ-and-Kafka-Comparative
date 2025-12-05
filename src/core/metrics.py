@@ -46,7 +46,7 @@ class MetricsCollector:
         self.end_time: Optional[float] = None
         self.messages_sent: int = 0
         self.messages_consumed: int = 0
-        # CORRIGIDO: Rastrear msg_ids já registrados para evitar duplicatas
+        # Rastrear msg_ids já registrados para evitar duplicatas
         self._recorded_msg_ids: set = set()
 
     def start_timing(self):
@@ -69,7 +69,7 @@ class MetricsCollector:
             latency: Latência em segundos
             message_id: ID da mensagem
         
-        CORRIGIDO: Evita registrar a mesma mensagem múltiplas vezes.
+        Evita registrar a mesma mensagem múltiplas vezes.
         Se a mensagem já foi registrada, ignora silenciosamente.
         """
         # Evitar duplicatas: se já registramos esta mensagem, ignorar

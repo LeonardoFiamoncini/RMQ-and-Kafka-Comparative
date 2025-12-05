@@ -1,6 +1,5 @@
 """
 Módulo simplificado de benchmark para TCC
-Objetivo: Comparar Baseline, RabbitMQ e Kafka em 5 portes
 """
 
 import csv
