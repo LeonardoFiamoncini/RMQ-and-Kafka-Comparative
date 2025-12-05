@@ -1,6 +1,5 @@
 """
 Ponto de entrada principal do sistema de benchmark TCC
-Objetivo: Comparar Baseline HTTP, RabbitMQ e Kafka em 5 sizes
 """
 import argparse
 import sys
@@ -53,7 +52,7 @@ MÉTRICAS COLETADAS:
         "--message-size", 
         type=int, 
         default=100,
-        help="Tamanho de cada mensagem em bytes (padrão: 100 = 0.1KB). Valores recomendados: 100, 1000, 10000"
+        help="Tamanho de cada mensagem em bytes (padrão: 100 = 0.1KB). Valores recomendados: 100 e 1000"
     )
     
     # Modo servidor para baseline

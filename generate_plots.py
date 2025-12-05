@@ -32,7 +32,7 @@ def load_benchmark_data():
     """Carrega dados de benchmark de todos os sistemas com estrutura 3D (tech, size, message_size)"""
     # Estrutura 3D: data[tech][size][message_size] = []
     sizes = ['size1', 'size2', 'size3', 'size4', 'size5']
-    message_sizes = [100, 1000]  # 1KB, 10KB
+    message_sizes = [100, 1000]  # 0.1KB, 1KB
     
     data = {}
     for tech in ['baseline', 'rabbitmq', 'kafka']:

@@ -1,4 +1,4 @@
-# Dependências do projeto - TCC Benchmark
+# Dependências do projeto
 # Versões fixas para garantir reprodutibilidade
 
 # Brokers de mensageria
