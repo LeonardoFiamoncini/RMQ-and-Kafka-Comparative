@@ -44,7 +44,7 @@ cd RMQ-and-Kafka-Comparative
 ```bash
 # Criar ambiente virtual
 python3 -m venv venv
-source venv/bin/activate  # No Windows: venv\Scripts\activate
+source venv/bin/activate
 
 # Instalar dependências
 pip install -r requirements.txt
@@ -74,7 +74,7 @@ docker ps
 Este script:
 1. Limpa logs antigos
 2. Reinicia containers
-3. Executa os 45 cenários (3 tecnologias × 5 sizes × 3 message-sizes)
+3. Executa os 45 cenários (3 tecnologias × 5 sizes × 2 message-sizes)
 4. Gera gráficos comparativos (separados por message-size)
 5. Exibe resumo dos resultados
 
@@ -110,9 +110,9 @@ Os resultados são salvos em:
 - **Logs detalhados**: `logs/<tecnologia>/<run-id>/`
 - **Resultados consolidados**: `logs/<tecnologia>/benchmark_results.csv` (inclui coluna `message_size`)
 - **Gráficos**: `logs/plots/`
-  - `throughput_comparison_*KB_*.png` - Comparação de throughput por message-size
-  - `latency_comparison_*KB_*.png` - Comparação de latências por message-size
-  - `summary_matrix_*KB_*.png` - Matriz resumo por message-size
+  - `throughput_comparison_*bytes_*.png` - Comparação de throughput por message-size
+  - `latency_comparison_*bytes_*.png` - Comparação de latências por message-size
+  - `summary_matrix_*bytes_*.png` - Matriz resumo por message-size
   - `summary_table_*.txt` - Tabela consolidada com todos os resultados
 
 ## Métricas Coletadas
@@ -122,7 +122,7 @@ Para cada cenário, são coletadas:
 - **Throughput**: Mensagens processadas por segundo
 - **Latência P95**: 95% das mensagens com latência menor que este valor
 - **Latência P99**: 99% das mensagens com latência menor que este valor
-- **Message Size**: Tamanho de cada mensagem em bytes (100, 1.000, 10.000)
+- **Message Size**: Tamanho de cada mensagem em bytes (100, 1.000)
 
 ## Estrutura do Projeto
 
