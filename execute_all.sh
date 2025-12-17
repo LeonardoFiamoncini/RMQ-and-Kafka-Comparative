@@ -1,6 +1,6 @@
 #!/bin/bash
 #
-# Script para executar todos os 45 cenários do benchmark TCC
+# Script para executar todos os 30 cenários do benchmark TCC
 # Baseline, RabbitMQ e Kafka nos 5 sizes × 2 message-sizes
 # Sizes: size1, size2, size3, size4, size5
 # Message Sizes: 0.1KB, 1KB
